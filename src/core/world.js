@@ -33,6 +33,8 @@ export class World {
     this.state = 'playing';
     this.kills = 0;
     this.damageDealt = 0;
+    // Batch 8 telemetry
+    this.damageTaken = 0; this.healDone = 0; this.hitsTaken = 0; this.lastHitSource = null; this.deathCause = null; this.deathTime = 0;
     this.dpsBuf = new Array(12).fill(0);
     this.dpsIdx = 0;
     this.dpsAcc = 0;
@@ -59,7 +61,7 @@ export class World {
 
     this.player = {
       x: 0, y: 0, vx: 0, vy: 0, r: 13,
-      hp: 150, maxHp: 150, speedMult: 1, dmgMult: 1, cdr: 0, crit: 0.05, magnetMult: 1,
+      hp: 165, maxHp: 165, speedMult: 1, dmgMult: 1, cdr: 0, crit: 0.05, magnetMult: 1,
       atk: 10, facing: { x: 1, y: 0 },
       // FIX Batch 4 (XP curve): design is XP to level N = 15 * 1.12^(N-1). Was 18 * 1.13^(N-1) — ~2x too slow at level 40.
       level: 1, xp: 0, xpNeed: 15, chakra: 0, overcharge: false,
@@ -71,7 +73,7 @@ export class World {
       hitFlash: 0, invulnFlash: 0, moving: false, kills: 0, regenT: 0,
     };
     const m = this.save ? metaModifiers(this.save) : {
-      clan: null, maxHp: 150, speedMult: 1, chakraMult: 1, dmgMult: 1, magnetMult: 1,
+      clan: null, maxHp: 165, speedMult: 1, chakraMult: 1, dmgMult: 1, magnetMult: 1,
       crit: 0.05, ascension: 0, enemyHpMult: 1, enemyCountMult: 1, noSafeZone: false,
       regen: 0, slow: 0, legacy: false,
     };
@@ -653,6 +655,7 @@ export class World {
       this.bus.emit('thorns', { x: p.x, y: p.y });
     }
     p.hp -= amount;
+    this.damageTaken += amount; this.hitsTaken += 1; this.deathCause = source; this.deathTime = this.t;
     p.iframe = 0.45;              // brief mercy window after any hit, so a crowd cannot shred in one tick
     p.hitFlash = 1;
     this.shake = Math.min(12, this.shake + 3.5);
@@ -964,7 +967,7 @@ export class World {
       p.xp -= p.xpNeed;
       p.level++;
       p.maxHp += 2;                                     // a shinobi grows into the run
-      p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.08 + 2);
+      { const before = p.hp; p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.08 + 2); this.healDone += (p.hp - before); }
       p.xpNeed = Math.round(15 * Math.pow(1.12, p.level - 1));
       this.pendingLevels++;
       leveled = true;

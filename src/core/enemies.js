@@ -2,11 +2,11 @@
 import { statusMoveMult, statusActive } from './statuses.js';
 export const ENEMY_TYPES = {
   fodder: {
-    id: 'fodder', r: 13, hpMult: 1.0, speed: 92, damage: 3, xp: 1,
+    id: 'fodder', r: 13, hpMult: 1.0, speed: 92, damage: 2.5, xp: 1,
     color: '#a8455f', edge: '#ff7f9b', name: 'Bandit',
   },
   brute: {
-    id: 'brute', r: 21, hpMult: 3.4, speed: 68, damage: 9, xp: 4,
+    id: 'brute', r: 21, hpMult: 3.4, speed: 68, damage: 8, xp: 4,
     color: '#6f2f4a', edge: '#ff9a7f', name: 'Brute',
   },
   teleporter: {
@@ -15,7 +15,7 @@ export const ENEMY_TYPES = {
   },
   siphoner: {
     id: 'siphoner', r: 14, hpMult: 3.4, speed: 112, damage: 8, xp: 6,
-    color: '#1f4a44', edge: '#5fe8c8', name: 'Siphoner', drain: 9,
+    color: '#1f4a44', edge: '#5fe8c8', name: 'Siphoner', drain: 6,
   },
   archer: {
     id: 'archer', r: 12, hpMult: 1.7, speed: 78, damage: 6, xp: 3,
@@ -24,11 +24,11 @@ export const ENEMY_TYPES = {
   },
 };
 
-export function enemyHP(minutes) { return 20 * Math.pow(1.085, minutes); }
+export function enemyHP(minutes) { return 20 * Math.pow(1.078, minutes); }
 // FIX Batch 3 (spawn formulas): design is SpawnRate = min(12, 1.5 + 0.9*min), MaxOnScreen = min(900, 120 + 40*min).
 // Code was min(16, 2.0 + 1.05*min) / min(900, 130 + 45*min) — at 10 min: 12.5/s vs 10.5/s (+19%), at 20 min: 16/s cap vs 12/s cap (+33%).
-export function spawnRate(minutes) { return Math.min(12, 1.5 + 0.9 * minutes); }
-export function maxOnScreen(minutes) { return Math.min(900, 120 + 40 * minutes); }
+export function spawnRate(minutes) { return Math.min(11, 1.5 + 0.9 * minutes); }
+export function maxOnScreen(minutes) { return Math.min(750, 120 + 40 * minutes); }
 export function podSize(minutes) { return 3 + Math.min(7, Math.floor(minutes / 4)); }
 
 // SpawnRate(t) is enemies per second. Pairs and small pods add visual variety without
@@ -127,7 +127,7 @@ export function updateEnemy(world, e, dt) {
   const pr = p.r + e.r;
 
   if (e.touchT <= 0 && (p.x - e.x) ** 2 + (p.y - e.y) ** 2 < pr * pr) {
-    e.touchT = 0.9;
+    e.touchT = 1.05;
     world.damagePlayer(def.damage, def.ranged ? 'ranged' : 'melee');
     if (def.drain) {
       world.player.chakra = Math.max(0, world.player.chakra - def.drain);

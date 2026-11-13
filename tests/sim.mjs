@@ -54,7 +54,10 @@ export function play(seed, { verbose = false, save = null } = {}) {
     seed, time: +w.t.toFixed(1), state: w.state,
     kills: w.kills, level: w.player.level, hp: +w.player.hp.toFixed(0), minHp: Math.round(minHp),
     peakEnemies: peak, boss: w.boss ? { hp: +w.boss.hp.toFixed(0), max: w.boss.maxHp, pct: +(w.boss.hp / w.boss.maxHp * 100).toFixed(0) } : null,
-    damage: Math.round(w.damageDealt), nan, ms: Math.round(ms), simSpeed: +(w.t / (ms / 1000)).toFixed(0),
+    damage: Math.round(w.damageDealt),
+    damageTaken: Math.round(w.damageTaken || 0), healDone: Math.round(w.healDone || 0), hitsTaken: w.hitsTaken || 0,
+    dps: w.t > 0 ? Math.round(w.damageDealt / w.t) : 0, dpsTaken: w.t > 0 ? Math.round((w.damageTaken || 0) / w.t) : 0,
+    deathCause: w.deathCause || null, deathTime: + (w.deathTime || 0).toFixed(1), nan, ms: Math.round(ms), simSpeed: +(w.t / (ms / 1000)).toFixed(0),
     fights, banished, promoted, rank: w.player.rank,
     abilities: w.abilities.map((a) => `${a.id}:R${a.rank}`).join(','),
     passives: w.passives.map((a) => `${a.id}:R${a.rank}`).join(','),
@@ -75,6 +78,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     if (!Number.isFinite(r.kills) || !Number.isFinite(r.damage)) { console.error(`seed ${s}: non-finite stats`); fail = true; }
     const m = r.marks.map((x) => `${x.t}s:L${x.lv}/k${x.kills}/hp${x.hp}`).join(' ');
     console.log(JSON.stringify({ ...r, marks: undefined }), m ? '\n  ' + m : '');
+    console.log(`  TELEMETRY seed ${s}: dps ${r.dps}/s | taken ${r.dpsTaken}/s | hits ${r.hitsTaken} | heal ${r.healDone} | death ${r.deathCause || '—'} @ ${r.deathTime}s | time ${r.time}s`);
   }
   // Determinism: same seed twice must give same kills / damage / level.
   const a = play(seeds[0]), b = play(seeds[0]);
