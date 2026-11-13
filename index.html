@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>Shinobi Survival — Phase 1</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div id="stage">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="hud-top">
+      <div class="hp"><div id="hpfill"></div><span id="hptext">100 / 100</span></div>
+      <div class="timer" id="timer">0:00</div>
+      <div class="chakra"><div id="chakrafill"></div><span id="chakratext">0 / 100</span></div>
+    </div>
+    <div class="hud-bottom">
+      <div class="xp"><div id="xpfill"></div><span id="xptext">Lv 1</span></div>
+      <div class="abilities" id="abilitybar"></div>
+    </div>
+    <div class="wave" id="wavebanner"></div>
+    <div id="bossbar" class="bossbar hidden">
+      <div class="bname">The Ronin</div>
+      <div class="btrack"><div id="bossfill"></div></div>
+    </div>
+    <div id="fps" class="fps"></div>
+  </div>
+
+  <div id="overlay" class="hidden"></div>
+  <div id="touch" class="hidden">
+    <div id="stick"><div id="stickknob"></div></div>
+    <div id="dashbtn">DASH</div>
+    <div id="ultbtn">ULT</div>
+  </div>
+</div>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

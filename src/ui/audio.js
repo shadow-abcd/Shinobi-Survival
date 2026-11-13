@@ -1,0 +1,65 @@
+// Tiny WebAudio synth — no assets. Everything is generated.
+export class Audio {
+  constructor() { this.ctx = null; this.enabled = true; this.master = null; this.noise = null; }
+  init() {
+    if (this.ctx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    this.ctx = new AC();
+    this.master = this.ctx.createGain();
+    this.master.gain.value = 0.35;
+    this.master.connect(this.ctx.destination);
+    // shared noise buffer
+    const len = this.ctx.sampleRate * 0.5;
+    const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    this.noise = buf;
+  }
+  toggle() {
+    this.enabled = !this.enabled;
+    if (this.master) this.master.gain.value = this.enabled ? 0.35 : 0;
+    return this.enabled;
+  }
+  tone(freq, dur, type = 'sine', gain = 0.2, slide = 0) {
+    if (!this.ctx || !this.enabled) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator();
+    const g = this.ctx.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(freq, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.master);
+    o.start(t); o.stop(t + dur + 0.02);
+  }
+  noiseHit(dur = 0.12, gain = 0.25, freq = 900, q = 1) {
+    if (!this.ctx || !this.enabled) return;
+    const t = this.ctx.currentTime;
+    const src = this.ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = this.ctx.createBiquadFilter();
+    f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(gain, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f); f.connect(g); g.connect(this.master);
+    src.start(t); src.stop(t + dur);
+  }
+  cast(el) {
+    if (el === 'wind') this.noiseHit(0.10, 0.12, 2200, 2.2);
+    else this.tone(220, 0.12, 'sawtooth', 0.10, 120);
+  }
+  hit(big) {
+    this.noiseHit(big ? 0.16 : 0.07, big ? 0.28 : 0.12, big ? 320 : 700, big ? 0.9 : 1.6);
+  }
+  detonate() {
+    this.noiseHit(0.3, 0.32, 220, 0.7);
+    this.tone(90, 0.28, 'sine', 0.22, -40);
+  }
+  hurt() { this.tone(140, 0.18, 'square', 0.16, -60); }
+  level() { this.tone(520, 0.1, 'triangle', 0.16, 180); setTimeout(() => this.tone(720, 0.14, 'triangle', 0.14, 200), 90); }
+  ultimate() { this.noiseHit(0.6, 0.35, 160, 0.6); this.tone(60, 0.6, 'sine', 0.28, -20); }
+  boss() { this.tone(70, 0.9, 'sine', 0.3, 20); this.noiseHit(0.7, 0.25, 120, 0.5); }
+}
