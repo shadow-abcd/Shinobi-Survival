@@ -369,6 +369,19 @@ export class World {
     dmg *= statusDamageTakenMult(e);
     if (crit) dmg *= 1.5;
     if (det) dmg *= det.def.detonateMult;
+    // FIX Batch 2 (Warden front armor): 60% blocked from the front, full from behind, none when vulnerable.
+    // Front = within 90 deg of the Warden's facing. Facing locks during telegraph (boss.js), so circling behind is the counterplay.
+    if (e.isBoss && e.id === 'warden' && e.state !== 'vulnerable' && e.state !== 'dead') {
+      const angToPlayer = Math.atan2(p.y - e.y, p.x - e.x);
+      let diff = angToPlayer - (e.face || 0);
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      if (Math.abs(diff) < Math.PI / 2) {
+        const before = dmg;
+        dmg *= 0.4;
+        if (before > 0) this.bus.emit('boss:armor', { x: e.x, y: e.y, blocked: before - dmg });
+      }
+    }
 
     // FIX Batch 1 (bug: Ronin counter was flat 9 damage):
     // Counter reflects 50% of the damage that would have been dealt.
@@ -965,6 +978,9 @@ export class World {
     // Out-of-combat recovery: 4 s clean, then a slow trickle. Rewards clean kiting.
     p.regenT = p.hitFlash > 0 ? 0 : p.regenT + dt;
     if (p.regenT > 4 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 1.1 * dt);
+    // FIX Batch 2 (Uzumaki regen was dead): clanRegen was computed in meta.js but never used.
+    // Uzumaki clan tree regen (0.25 / rank, up to 1.0 HP/s) now actually heals, always.
+    if (this.clanRegen > 0 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + this.clanRegen * dt);
     p.dashCd = Math.max(0, p.dashCd - dt);
     p.iframe = Math.max(0, p.iframe - dt);
     p.hitFlash = Math.max(0, p.hitFlash - dt * 3);
