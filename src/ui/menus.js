@@ -46,17 +46,17 @@ export class UI {
     this.showOverlay(`
       <div class="panel center">
         <div class="title">Shinobi Survival</div>
-        <div class="sub">Step 2 · Five elements · twenty jutsu · ten fusions</div>
+        <div class="sub">Step 4 · Twenty minutes · four bosses · a reason to run again</div>
         <div class="card stat" style="max-width:560px;margin:0 auto;cursor:default;">
           <div class="k">Your first mission</div>
           <div class="d" style="font-size:13.5px;">
-            Survive five minutes in the Whispering Forest, then face The Ronin. You start with a
-            fireball and an empty loadout.<br><br>
-            Every level you pick a jutsu or a passive — four active slots, six passives, five ranks
-            each. The elements prime each other: <b>Wind</b> aerates and Fire detonates for 3×,
-            <b>Water</b> drenches and Lightning chains, <b>Earth</b> roots and Wind launches.
-            Ten fusion pairs sit between the five elements. Find one and the screen starts
-            detonating itself.
+            Twenty minutes. Four bosses between you and the rank of Kage — the Ronin at five,
+            the Twin at ten, the Warden at fifteen, the Sovereign at twenty.<br><br>
+            You start with a fireball and an empty loadout. Every level you pick a jutsu or a
+            passive: four active slots, six passives, five ranks each. The elements prime each
+            other — <b>Wind</b> aerates and Fire detonates for 3×, <b>Water</b> drenches and
+            Lightning chains, <b>Earth</b> roots and Wind launches. Ten fusion pairs sit between
+            the five elements. Seals carry over: spend them in the Academy.
           </div>
         </div>
         <div class="keys">
