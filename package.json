@@ -1,1 +1,13 @@
-{"type":"module","name":"shinobi-survival-phase1","version":"0.1.0","private":true}
+{
+  "type": "module",
+  "name": "shinobi-survival-phase1",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "start": "python3 serve.py 8099",
+    "bundle": "node tools/bundle.mjs .",
+    "test": "node tests/combat.test.mjs",
+    "sim": "node tests/sim.mjs"
+  },
+  "description": "Shinobi Survival \u2014 a twenty-minute roguelike action-survival game (browser build)"
+}

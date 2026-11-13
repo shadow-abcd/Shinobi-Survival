@@ -113,9 +113,13 @@ function tryUltimate() {
 }
 
 // ---------------- audio hooks ----------------
-world.bus.on('cast', (e) => audio.cast(e.empowered ? 'fire' : 'fire'));
+world.bus.on('cast', (e) => audio.cast(e.element || 'fire'));
 world.bus.on('damage', (e) => { if (!e.dot) audio.hit(e.crit || e.detonate); });
 world.bus.on('detonate', () => audio.detonate());
+world.bus.on('fusion', () => audio.fusion());
+world.bus.on('boss:telegraph', (e) => audio.telegraph(e.kind));
+world.bus.on('boss:phase', () => audio.bossPhase());
+world.bus.on('stage:clear', () => audio.level());
 world.bus.on('player:hurt', () => audio.hurt());
 world.bus.on('levelup', () => audio.level());
 world.bus.on('boss:spawn', () => audio.boss());
@@ -231,12 +235,17 @@ function frame(now) {
       if (touchVec.x || touchVec.y) { world.input.x = touchVec.x; world.input.y = touchVec.y; }
       else { world.input.x = k.x; world.input.y = k.y; }
     }
-    acc += dt;
-    let guard = 0;
-    while (acc >= TICK && guard++ < 6) {
-      world.step(TICK);
-      acc -= TICK;
-      if (world.state !== 'playing') break;
+    if (world.hitstop > 0) {
+      world.hitstop = Math.max(0, world.hitstop - dt);   // brief freeze on big hits
+      acc = 0;
+    } else {
+      acc += dt;
+      let guard = 0;
+      while (acc >= TICK && guard++ < 6) {
+        world.step(TICK);
+        acc -= TICK;
+        if (world.state !== 'playing') break;
+      }
     }
     if (world.state === 'playing' && !lateAnnounced && world.t > 270 && world.t < 300) {
       lateAnnounced = true;

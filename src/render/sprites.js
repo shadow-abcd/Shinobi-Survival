@@ -2,7 +2,7 @@
 // Canvas2D gradients per-entity per-frame would be far too slow at 300+ enemies.
 const DPR = Math.min(2, typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1);
 
-function canvas(w, h) {
+function makeCanvas(w, h) {
   const c = document.createElement('canvas');
   c.width = Math.ceil(w * DPR);
   c.height = Math.ceil(h * DPR);
@@ -12,7 +12,7 @@ function canvas(w, h) {
 }
 
 function glow(color, r, alpha = 1) {
-  const { c, g } = canvas(r * 2, r * 2);
+  const { c, g } = makeCanvas(r * 2, r * 2);
   const grd = g.createRadialGradient(r, r, 0, r, r, r);
   grd.addColorStop(0, hexA(color, 0.95 * alpha));
   grd.addColorStop(0.45, hexA(color, 0.35 * alpha));
@@ -32,7 +32,7 @@ export function hexA(hex, a) {
 function enemySprite(type, color, edge, r) {
   const pad = 12;
   const size = (r + pad) * 2;
-  const { c, g } = canvas(size, size);
+  const { c, g } = makeCanvas(size, size);
   const cx = size / 2, cy = size / 2;
 
   // shadow
@@ -98,7 +98,7 @@ function darken(hex, amt) {
 function playerSprite(r) {
   const pad = 16;
   const size = (r + pad) * 2;
-  const { c, g } = canvas(size, size);
+  const { c, g } = makeCanvas(size, size);
   const cx = size / 2, cy = size / 2;
 
   // shadow
@@ -167,7 +167,7 @@ function bossSprite(r, scheme = {}) {
   const horns = scheme.horns !== false;
   const pad = 22;
   const size = (r + pad) * 2;
-  const { c, g } = canvas(size, size);
+  const { c, g } = makeCanvas(size, size);
   const cx = size / 2, cy = size / 2;
 
   // shadow
@@ -230,7 +230,7 @@ function bossSprite(r, scheme = {}) {
 
 function gemSprite() {
   const s = 24;
-  const { c, g } = canvas(s, s);
+  const { c, g } = makeCanvas(s, s);
   const cx = s / 2, cy = s / 2;
   const grd = g.createRadialGradient(cx, cy, 1, cx, cy, 11);
   grd.addColorStop(0, 'rgba(120,225,255,0.55)');
@@ -263,7 +263,7 @@ function lighten(hex, amt) {
 
 function toadSprite(r) {
   const pad = 12, size = (r + pad) * 2;
-  const { c, g } = canvas(size, size);
+  const { c, g } = makeCanvas(size, size);
   const cx = size / 2, cy = size / 2;
   g.fillStyle = 'rgba(0,0,0,0.4)';
   g.beginPath(); g.ellipse(cx, cy + r * 0.7, r * 1.1, r * 0.42, 0, 0, Math.PI * 2); g.fill();
@@ -290,7 +290,7 @@ function toadSprite(r) {
 
 function golemSprite(r) {
   const pad = 12, size = (r + pad) * 2;
-  const { c, g } = canvas(size, size);
+  const { c, g } = makeCanvas(size, size);
   const cx = size / 2, cy = size / 2;
   g.fillStyle = 'rgba(0,0,0,0.45)';
   g.beginPath(); g.ellipse(cx, cy + r * 0.72, r * 1.15, r * 0.4, 0, 0, Math.PI * 2); g.fill();
@@ -318,7 +318,7 @@ function golemSprite(r) {
 
 function waterCloneSprite(r) {
   const pad = 12, size = (r + pad) * 2;
-  const { c, g } = canvas(size, size);
+  const { c, g } = makeCanvas(size, size);
   const cx = size / 2, cy = size / 2;
   g.fillStyle = 'rgba(0,0,0,0.3)';
   g.beginPath(); g.ellipse(cx, cy + r * 0.6, r * 0.9, r * 0.35, 0, 0, Math.PI * 2); g.fill();

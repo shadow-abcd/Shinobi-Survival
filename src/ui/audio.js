@@ -48,8 +48,29 @@ export class Audio {
     src.start(t); src.stop(t + dur);
   }
   cast(el) {
-    if (el === 'wind') this.noiseHit(0.10, 0.12, 2200, 2.2);
-    else this.tone(220, 0.12, 'sawtooth', 0.10, 120);
+    switch (el) {
+      case 'wind': this.noiseHit(0.12, 0.13, 2400, 2.4); break;
+      case 'water': this.tone(420, 0.14, 'sine', 0.10, -180); this.noiseHit(0.08, 0.08, 900, 1.4); break;
+      case 'lightning': this.noiseHit(0.07, 0.16, 3800, 3.0); this.tone(900, 0.06, 'square', 0.07, -300); break;
+      case 'earth': this.tone(90, 0.18, 'sine', 0.16, 30); this.noiseHit(0.10, 0.14, 260, 0.8); break;
+      default: this.tone(220, 0.12, 'sawtooth', 0.10, 120);
+    }
+  }
+  telegraph(kind) {
+    if (kind === 'dash') this.tone(180, 0.18, 'triangle', 0.09, 90);
+    else this.tone(140, 0.22, 'sine', 0.10, 40);
+  }
+  fusion() {
+    this.noiseHit(0.34, 0.34, 200, 0.7);
+    this.tone(70, 0.32, 'sine', 0.26, -20);
+  }
+  bossPhase() {
+    this.tone(110, 0.5, 'sawtooth', 0.14, 60);
+    this.noiseHit(0.5, 0.18, 140, 0.6);
+  }
+  extract() {
+    this.tone(300, 0.2, 'triangle', 0.14, 180);
+    setTimeout(() => this.tone(450, 0.28, 'triangle', 0.12, 220), 140);
   }
   hit(big) {
     this.noiseHit(big ? 0.16 : 0.07, big ? 0.28 : 0.12, big ? 320 : 700, big ? 0.9 : 1.6);

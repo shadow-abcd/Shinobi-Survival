@@ -485,6 +485,22 @@ export class Renderer {
       }
       ctx.restore();
 
+      // status pips: the prime/detonate loop has to be readable at a glance
+      let pip = 0;
+      for (const sid in e.statuses) {
+        const st = e.statuses[sid];
+        if (st.t <= 0) continue;
+        const def = STATUS[sid];
+        if (!def || pip >= 4) continue;
+        const px = e.x - e.r + pip * 5.5;
+        const py = e.y + e.r + 7;
+        ctx.fillStyle = def.color;
+        ctx.globalAlpha = 0.9;
+        ctx.beginPath(); ctx.arc(px, py, 1.9, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        pip++;
+      }
+
       // HP pip for damaged tough enemies
       if (e.hp < e.maxHp && e.type !== 'fodder') {
         const bw = e.r * 1.9;
@@ -622,34 +638,68 @@ export class Renderer {
     const ctx = this.ctx, S = this.sprites;
     ctx.globalCompositeOperation = 'lighter';
     for (const p of this.world.projectiles.active) {
-      const img = p.element === 'wind' ? S.orbWind : S.orbFire;
-      const s = p.element === 'wind' ? 40 : 46;
+      const el = p.element;
       ctx.globalAlpha = 0.95;
-      if (p.shape === 'crescent') {
+      if (el === 'wind') {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(Math.atan2(p.vy, p.vx));
         ctx.strokeStyle = '#9ff5e4';
         ctx.lineWidth = 4;
         ctx.beginPath(); ctx.arc(0, 0, 12, -1.1, 1.1); ctx.stroke();
-        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
+        ctx.strokeStyle = 'rgba(255,255,255,0.85)';
         ctx.lineWidth = 1.4;
         ctx.beginPath(); ctx.arc(0, 0, 12, -0.9, 0.9); ctx.stroke();
         ctx.restore();
-      } else if (p.bolt) {
+      } else if (el === 'lightning') {
         ctx.save();
         ctx.translate(p.x, p.y);
         ctx.rotate(Math.atan2(p.vy, p.vx));
         ctx.strokeStyle = '#fff8d0';
         ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.moveTo(-14, 0); ctx.lineTo(-6, -4); ctx.lineTo(2, 3); ctx.lineTo(12, -2);
+        ctx.moveTo(-16, 0); ctx.lineTo(-9, -5); ctx.lineTo(-2, 3); ctx.lineTo(6, -3); ctx.lineTo(14, 0);
+        ctx.stroke();
+        ctx.strokeStyle = 'rgba(255,233,138,0.5)';
+        ctx.lineWidth = 7;
+        ctx.stroke();
+        ctx.restore();
+      } else if (el === 'water') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(Math.atan2(p.vy, p.vx));
+        const grad = ctx.createRadialGradient(0, 0, 1, 0, 0, 12);
+        grad.addColorStop(0, '#dff4ff');
+        grad.addColorStop(0.6, '#63b7ff');
+        grad.addColorStop(1, 'rgba(60,140,255,0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath(); ctx.ellipse(0, 0, 14, 8, 0, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = 'rgba(160,220,255,0.6)';
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(-6, 0, 7, 1.2, 5.0); ctx.stroke();
+        ctx.restore();
+      } else if (el === 'earth') {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(Math.atan2(p.vy, p.vx));
+        ctx.fillStyle = '#d8b07a';
+        ctx.beginPath();
+        ctx.moveTo(12, 0); ctx.lineTo(-8, -7); ctx.lineTo(-4, 0); ctx.lineTo(-8, 7);
+        ctx.closePath(); ctx.fill();
+        ctx.strokeStyle = 'rgba(90,60,30,0.8)';
+        ctx.lineWidth = 1.4;
         ctx.stroke();
         ctx.restore();
       } else {
-        ctx.drawImage(img, p.x - s / 2, p.y - s / 2, s, s);
-        ctx.fillStyle = '#fff6e8';
-        ctx.beginPath(); ctx.arc(p.x, p.y, 3.4, 0, Math.PI * 2); ctx.fill();
+        const glow = 46;
+        ctx.drawImage(S.orbFire, p.x - glow / 2, p.y - glow / 2, glow, glow);
+        ctx.fillStyle = '#fff3d8';
+        ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+        // ember trail
+        if (Math.random() < 0.6) {
+          ctx.fillStyle = 'rgba(255,150,60,0.5)';
+          ctx.fillRect(p.x - p.vx * 0.012, p.y - p.vy * 0.012, 2, 2);
+        }
       }
     }
     for (const p of this.world.eproj.active) {
@@ -709,12 +759,43 @@ export class Renderer {
       const k = 1 - b.life / b.total;
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = (1 - k) * 0.55;
-      const grd = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, b.r * (0.7 + k * 0.4));
-      grd.addColorStop(0, 'rgba(255,240,200,0.9)');
-      grd.addColorStop(0.7, b.color);
-      grd.addColorStop(1, 'rgba(255,120,40,0)');
+      const rad = b.r * (0.7 + k * 0.4);
+      const grd = ctx.createRadialGradient(b.x, b.y, 0, b.x, b.y, rad);
+      grd.addColorStop(0, 'rgba(255,250,235,0.85)');
+      grd.addColorStop(0.65, b.color || '#ff9a3c');
+      grd.addColorStop(1, 'rgba(0,0,0,0)');
       ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(b.x, b.y, b.r * (0.7 + k * 0.4), 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x, b.y, rad, 0, Math.PI * 2); ctx.fill();
+      // element signature on top of the splash
+      if (b.element === 'earth') {
+        ctx.strokeStyle = '#c9a06a';
+        ctx.lineWidth = 3;
+        for (let i = 0; i < 6; i++) {
+          const a = (i / 6) * Math.PI * 2 + k;
+          ctx.beginPath();
+          ctx.moveTo(b.x + Math.cos(a) * rad * 0.2, b.y + Math.sin(a) * rad * 0.2);
+          ctx.lineTo(b.x + Math.cos(a) * rad * 0.95, b.y + Math.sin(a) * rad * 0.95);
+          ctx.stroke();
+        }
+      } else if (b.element === 'water') {
+        ctx.strokeStyle = 'rgba(160,220,255,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.x, b.y, rad * 0.9, 0, Math.PI * 2); ctx.stroke();
+      } else if (b.element === 'lightning') {
+        ctx.strokeStyle = 'rgba(255,248,200,0.9)';
+        ctx.lineWidth = 2.5;
+        for (let i = 0; i < 5; i++) {
+          const a = (i / 5) * Math.PI * 2 + k * 2;
+          ctx.beginPath();
+          ctx.moveTo(b.x, b.y);
+          ctx.lineTo(b.x + Math.cos(a) * rad, b.y + Math.sin(a) * rad);
+          ctx.stroke();
+        }
+      } else if (b.element === 'wind') {
+        ctx.strokeStyle = 'rgba(160,245,220,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(b.x, b.y, rad * 0.8, k * 6, k * 6 + 2.2); ctx.stroke();
+      }
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
     }
@@ -739,11 +820,47 @@ export class Renderer {
         ctx.beginPath(); ctx.arc(0, 0, 200, -Math.PI / 2, Math.PI / 2); ctx.stroke();
       } else if (t.kind === 'dash') {
         ctx.rotate(t.angle);
+        const len = t.len || 400;
         ctx.fillStyle = `rgba(255,70,70,${0.10 + k * 0.2})`;
-        ctx.fillRect(0, -16, t.len || 400, 32);
+        ctx.fillRect(0, -16, len, 32);
         ctx.strokeStyle = `rgba(255,120,120,${0.4 + k * 0.4})`;
         ctx.lineWidth = 2;
-        ctx.strokeRect(0, -16, t.len || 400, 32);
+        ctx.strokeRect(0, -16, len, 32);
+        // arrow head so the direction is unmistakable
+        ctx.fillStyle = `rgba(255,120,120,${0.5 + k * 0.4})`;
+        ctx.beginPath();
+        ctx.moveTo(len, 0); ctx.lineTo(len - 26, -20); ctx.lineTo(len - 26, 20);
+        ctx.closePath(); ctx.fill();
+      } else if (t.kind === 'slam') {
+        ctx.strokeStyle = `rgba(255,180,90,${0.4 + k * 0.5})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, 300, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 0, 300 * (1 - k * 0.8), 0, Math.PI * 2); ctx.stroke();
+      } else if (t.kind === 'frost') {
+        ctx.strokeStyle = `rgba(180,235,255,${0.35 + k * 0.45})`;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.arc(0, 0, 420, 0, Math.PI * 2); ctx.stroke();
+        for (let i = 0; i < 12; i++) {
+          const a = (i / 12) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * 420 * 0.25, Math.sin(a) * 420 * 0.25);
+          ctx.lineTo(Math.cos(a) * 420, Math.sin(a) * 420);
+          ctx.stroke();
+        }
+      } else if (t.kind === 'kirin') {
+        ctx.strokeStyle = `rgba(255,240,150,${0.5 + k * 0.5})`;
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.arc(0, 0, 130, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(0, -600);
+        ctx.lineTo(-30, -400); ctx.lineTo(20, -260); ctx.lineTo(-14, -120); ctx.lineTo(0, 0);
+        ctx.stroke();
+      } else if (t.kind === 'volley') {
+        ctx.fillStyle = `rgba(255,150,150,${0.12 + k * 0.2})`;
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.arc(0, 0, 420, t.angle - 0.45, t.angle + 0.45);
+        ctx.closePath(); ctx.fill();
       }
       ctx.restore();
     }

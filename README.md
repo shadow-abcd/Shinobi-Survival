@@ -14,6 +14,9 @@ python3 serve.py 8099
 (`serve.py` is a static server with caching disabled; `python3 -m http.server 8099` works too,
 you may just have to hard-reload after an edit.)
 
+Or open `dist/shinobi.html` — the whole game inlined into one file, no server needed. Rebuild it
+with `npm run bundle` after changing anything.
+
 No build step, no dependencies, no network calls. Plain ES modules + Canvas 2D.
 
 ## Controls
@@ -134,10 +137,19 @@ Debug parameters (development only): `?seed=N` fixed seed, `?warp=SECONDS` fast-
 `?god=1` invulnerable while fast-forwarding, `?auto=1` autopilot, `?fps=1` metrics overlay,
 `?ult=cataclysm|susanoo|toad` force an ultimate.
 
+## Packaging
+
+`tools/bundle.mjs` is a dependency-free bundler: it resolves the relative imports from
+`src/app.js`, concatenates the modules in dependency order, strips the import/export syntax,
+inlines the stylesheet, and writes `dist/shinobi.html` (~190 KB, no network, no build toolchain).
+That single file is the build you can hand to someone, drop on a static host, or open by
+double-clicking.
+
 ## Known rough edges
 
 - Art is procedural primitives, not the game's final style — it exists to be readable at density.
-- No audio assets yet; the WebAudio synth is a placeholder for hits, casts and detonations.
+- Audio is synthesised at runtime (no music, no recorded SFX); it reads as placeholder, not score.
+- World phases change light and tint, not geometry.
 - Mobile layout is functional but untested on a real device.
 - The run-end screen has no meta payout yet: the meta layer is Step 4.
 - World phases change light and tint, not geometry; destructible cover and hazards are polish.

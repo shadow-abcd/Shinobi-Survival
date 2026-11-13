@@ -52,6 +52,7 @@ export class World {
     this.bossKilledAt = 0;
     this._bossAwarded = false;
     this.shake = 0;
+    this.hitstop = 0;
     this.slowmo = 0;
     this.lastBossHp = 0;
 
@@ -401,6 +402,7 @@ export class World {
       x: e.x, y: e.y, status: det.id, element: opts.element, r: def.spread ? 130 : 110,
     });
     this.shake = Math.min(9, this.shake + 2.2);
+    this.hitstop = Math.max(this.hitstop, 0.045);
     // Fire + Wind is the fusion pair: the detonation itself is Firestorm (memo C9).
     const key = fusionKey(opts.element, def.element);
     if (FUSIONS[key]) this.fireFusion(e, key);
@@ -428,6 +430,7 @@ export class World {
       element: 'fire', status: f.status, statusStacks: f.stacks, color: f.color,
     });
     this.shake = Math.min(10, this.shake + 2.5);
+    this.hitstop = Math.max(this.hitstop, 0.06);
     this.bus.emit('fusion', { x: e.x, y: e.y, id: f.id, name: f.name });
   }
 
@@ -830,6 +833,7 @@ export class World {
     else if (id === 'toad') this.summonToad();
     else this.castCataclysm();
     this.shake = Math.min(16, this.shake + 9);
+    this.hitstop = Math.max(this.hitstop, 0.08);
     this.bus.emit('ultimate', { x: p.x, y: p.y, id });
     return true;
   }
