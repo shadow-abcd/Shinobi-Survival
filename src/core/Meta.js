@@ -31,19 +31,23 @@ export const CLANS = {
   },
 };
 
-// Global stat upgrades: cost escalates per rank.
+// FIX Batch 7 (Academy costs to design §6): Pillar 1 is FLAT costs, not escalating growth.
+// Design: HP +10 flat/node (max 10, 30 Seals each), Chakra +5%/node (max 10, 40 each), Move +2%/node (max 10, 40 each).
+// dmg/mag are extras beyond the design's three — kept, but also flat for consistency.
 export const GLOBAL_UPGRADES = {
-  hp: { id: 'hp', name: 'Constitution', desc: '+12 max HP per rank', max: 8, base: 20, growth: 1.55 },
-  dmg: { id: 'dmg', name: 'Chakra Flow', desc: '+6% jutsu damage per rank', max: 8, base: 24, growth: 1.55 },
-  spd: { id: 'spd', name: 'Footwork', desc: '+3% move speed per rank', max: 6, base: 22, growth: 1.5 },
-  mag: { id: 'mag', name: 'Attunement', desc: '+12% pickup radius per rank', max: 6, base: 18, growth: 1.45 },
-  chk: { id: 'chk', name: 'Reserves', desc: '+10% Chakra gain per rank', max: 6, base: 22, growth: 1.5 },
+  hp: { id: 'hp', name: 'Constitution', desc: '+10 max HP per rank', max: 10, flat: 30 },
+  dmg: { id: 'dmg', name: 'Chakra Flow', desc: '+6% jutsu damage per rank', max: 8, flat: 30 },
+  spd: { id: 'spd', name: 'Footwork', desc: '+2% move speed per rank', max: 10, flat: 40 },
+  mag: { id: 'mag', name: 'Attunement', desc: '+12% pickup radius per rank', max: 6, flat: 25 },
+  chk: { id: 'chk', name: 'Reserves', desc: '+5% Chakra gain per rank', max: 10, flat: 40 },
 };
 
+// FIX Batch 7: Clan tree is 5 nodes, 100 Seals each (design §6). Was 4 nodes at 45*1.6^rank + ascension scaling.
 export const CLAN_TREE = {
-  ranks: 4,
-  base: 45,
-  growth: 1.6,
+  ranks: 5,
+  base: 100,
+  growth: 1,
+  flat: 100,
   // each rank gives the clan a small bonus in its own direction
   bonus: {
     uchiha: { crit: 0.03 },
@@ -53,7 +57,13 @@ export const CLAN_TREE = {
   },
 };
 
-export const ARSENAL_COST = { 2: 50, 3: 150 };
+export const ARSENAL_COST = { 2: 50, 3: 150, ult: 200 };
+// Ultimates: Cataclysm is the free starter. Susanoo + Toad are 200 Seals each (design §6).
+export const ULTIMATES = [
+  { id: 'susanoo', name: 'Susanoo Ribs', desc: '90% reduction, status immunity, +50% damage for 5s.' },
+  { id: 'toad', name: 'Summoning: Toad Sage', desc: 'A toad fights beside you.' },
+];
+export const ULTIMATE_COST = 200;
 
 export function defaultSave() {
   return {
@@ -73,31 +83,60 @@ export function defaultSave() {
     bestTime: 0,
     // FIX Batch 6 (Banish purchases): +1 Banish charge per purchase, max 2 bought, 50 Seals each. In-run charges = 1 + this.
     banish: 0,
+    // FIX Batch 7: Ultimates owned beyond the free Cataclysm.
+    ultimates: { susanoo: false, toad: false },
   };
 }
 
+// FIX Batch 7 (crash-mid-write): load tries main save, then the backup written by writeSave(). If both fail, fresh save.
 export function loadSave(storage) {
-  try {
-    const raw = storage && storage.getItem(SAVE_KEY);
-    if (!raw) return defaultSave();
+  const d = defaultSave();
+  const tryParse = (raw) => {
+    if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return { ...defaultSave(), ...parsed, global: { ...defaultSave().global, ...(parsed.global || {}) } };
+    return { ...d, ...parsed,
+      global: { ...d.global, ...(parsed.global || {}) },
+      ultimates: { ...d.ultimates, ...(parsed.ultimates || {}) },
+      clanTree: { ...d.clanTree, ...(parsed.clanTree || {}) },
+      clans: { ...d.clans, ...(parsed.clans || {}) },
+      legacy: { ...d.legacy, ...(parsed.legacy || {}) },
+      arsenal: { ...(parsed.arsenal || {}) },
+    };
+  };
+  try {
+    const main = storage && tryParse(storage.getItem(SAVE_KEY));
+    if (main) return main;
+    const bak = storage && tryParse(storage.getItem(SAVE_KEY + '.bak'));
+    if (bak) return bak;
+    return d;
   } catch (e) {
-    return defaultSave();
+    try {
+      const bak = storage && tryParse(storage.getItem(SAVE_KEY + '.bak'));
+      if (bak) return bak;
+    } catch (e2) { /* fall through */ }
+    return d;
   }
 }
 
+// FIX Batch 7: write backup first, then main. A crash between the two leaves a valid backup for loadSave() to recover.
 export function writeSave(storage, save) {
-  try { storage.setItem(SAVE_KEY, JSON.stringify(save)); return true; } catch (e) { return false; }
+  try {
+    const json = JSON.stringify(save);
+    storage.setItem(SAVE_KEY + '.bak', json);
+    storage.setItem(SAVE_KEY, json);
+    return true;
+  } catch (e) { return false; }
 }
 
 export function costOf(def, rank) {
+  // FIX Batch 7: flat costs (design) return the flat price. Legacy base/growth defs still use the old formula.
+  if (def.flat !== undefined) return def.flat;
   return Math.round(def.base * Math.pow(def.growth, rank));
 }
 
 export function clanTreeCost(save, clan) {
-  const r = save.clanTree[clan] || 0;
-  return Math.round(CLAN_TREE.base * Math.pow(CLAN_TREE.growth, r) * (1 + save.ascension * 0.1));
+  // FIX Batch 7: 100 Seals flat per node, no ascension scaling (design §6).
+  return CLAN_TREE.flat !== undefined ? CLAN_TREE.flat : Math.round(CLAN_TREE.base * Math.pow(CLAN_TREE.growth, save.clanTree[clan] || 0));
 }
 
 export function arsenalUnlocked(save, id) { return !!save.arsenal[id]; }
@@ -130,6 +169,17 @@ export function buyArsenal(save, abilityId, tier) {
   save.seals -= cost;
   save.arsenal[abilityId] = true;
   return { ok: true, cost };
+}
+
+// FIX Batch 7: Ultimates cost 200 Seals each (design §6). Cataclysm is free and not in save.ultimates.
+export function buyUltimate(save, id) {
+  if (!ULTIMATES.some((u) => u.id === id)) return { ok: false, reason: 'tier' };
+  if (save.ultimates && save.ultimates[id]) return { ok: false, reason: 'owned' };
+  if (save.seals < ULTIMATE_COST) return { ok: false, reason: 'seals', cost: ULTIMATE_COST };
+  save.seals -= ULTIMATE_COST;
+  if (!save.ultimates) save.ultimates = {};
+  save.ultimates[id] = true;
+  return { ok: true, cost: ULTIMATE_COST };
 }
 
 export function buyClanTree(save, clan) {
@@ -172,9 +222,10 @@ export function metaModifiers(save) {
   return {
     clan: clan.id,
     // FIX Batch 2: base HP is 150 per design, not 170 (Uchiha was getting 136 instead of 120).
-    maxHp: Math.round(150 * clan.hp) + (g.hp || 0) * 12 + (bonus.hp || 0) * 150,
-    speedMult: clan.speed * (1 + (g.spd || 0) * 0.03),
-    chakraMult: clan.chakra * (1 + (g.chk || 0) * 0.10),
+    // FIX Batch 7: Academy bonuses to design — HP +10/node, Speed +2%/node, Chakra +5%/node (was +12, +3%, +10%).
+    maxHp: Math.round(150 * clan.hp) + (g.hp || 0) * 10 + (bonus.hp || 0) * 150,
+    speedMult: clan.speed * (1 + (g.spd || 0) * 0.02),
+    chakraMult: clan.chakra * (1 + (g.chk || 0) * 0.05),
     // FIX Batch 2 (Legacy only paid on Perfect Shinobi): each Legacy now gives +2.5% damage.
     // 4 Legacies = +10%, same as Perfect before, but 1-3 Legacies now do something.
     dmgMult: 1 + (g.dmg || 0) * 0.06 + Object.values(save.legacy).filter(Boolean).length * 0.025,
