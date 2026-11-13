@@ -1,7 +1,7 @@
 // The Academy: Seals spending between runs — global stats, arsenal unlocks, clan trees.
 import {
-  CLANS, GLOBAL_UPGRADES, CLAN_TREE, ARSENAL_COST,
-  costOf, clanTreeCost, clanUnlocked, buyGlobal, buyArsenal, buyClanTree,
+  CLANS, GLOBAL_UPGRADES, CLAN_TREE, ARSENAL_COST, BANISH_COST, BANISH_MAX_BOUGHT,
+  costOf, clanTreeCost, clanUnlocked, buyGlobal, buyArsenal, buyClanTree, buyBanish,
   selectClan, perfectShinobi,
 } from '../core/meta.js';
 import { ABILITIES, ELEMENTS } from '../core/abilities.js';
@@ -20,6 +20,16 @@ export function academyHTML(save) {
       <div class="ar-cost">${maxed ? 'maxed' : cost + ' seals'}</div>
     </div>`;
   }).join('');
+
+  // FIX Batch 6 (Banish purchases): +1 Banish charge per run, 50 Seals each, max 2 bought (max 3 per run total).
+  const banishBought = save.banish || 0;
+  const banishMaxed = banishBought >= BANISH_MAX_BOUGHT;
+  const banishRow = `<div class="acad-row ${banishMaxed ? 'maxed' : ''}" data-kind="banish" data-id="banish">
+      <div class="ar-name">Banish Charge<span class="ar-rank">${banishBought}/${BANISH_MAX_BOUGHT}</span></div>
+      <div class="ar-desc">+1 Banish charge per run (1 free + bought). Banish removes an offered card from the pool for the run.</div>
+      <div class="ar-cost">${banishMaxed ? 'maxed' : BANISH_COST + ' seals'}</div>
+    </div>`;
+  const globalWithBanish = global + banishRow;
 
   const arsenal = Object.values(ABILITIES).filter((a) => a.tier >= 2).map((a) => {
     const owned = !!save.arsenal[a.id];
@@ -57,7 +67,7 @@ export function academyHTML(save) {
       <div class="tab" data-tab="arsenal">Arsenal</div>
       <div class="tab" data-tab="clans">Clans</div>
     </div>
-    <div class="acad-body" data-panel="global">${global}</div>
+    <div class="acad-body" data-panel="global">${globalWithBanish}</div>
     <div class="acad-body hidden" data-panel="arsenal">${arsenal}</div>
     <div class="acad-body hidden" data-panel="clans">${clans}</div>
     <div class="acad-foot">
@@ -83,6 +93,7 @@ export function bindAcademy(root, save, onBuy, onClose) {
       const id = row.dataset.id;
       let res;
       if (kind === 'global') res = buyGlobal(save, id);
+      else if (kind === 'banish') res = buyBanish(save);
       else if (kind === 'arsenal') res = buyArsenal(save, id, parseInt(row.dataset.tier, 10));
       else if (kind === 'clan') {
         if (clanUnlocked(save, id)) {
