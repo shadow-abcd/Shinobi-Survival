@@ -373,16 +373,22 @@ export class Renderer {
     for (const z of this.world.zones.active) {
       const k = 1 - z.t / z.delay;              // 0 → 1 as the strike lands
       ctx.save();
-      ctx.globalAlpha = 0.10 + k * 0.18;
+      ctx.globalAlpha = 0.07 + k * 0.12;
       ctx.fillStyle = z.color;
       ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.fill();
-      ctx.globalAlpha = 0.55 + k * 0.35;
+      ctx.globalAlpha = 0.7 + k * 0.3;
       ctx.strokeStyle = z.color;
-      ctx.lineWidth = 2 + k * 2;
+      ctx.lineWidth = 2.5;
       ctx.beginPath(); ctx.arc(z.x, z.y, z.r, 0, Math.PI * 2); ctx.stroke();
-      // inner fill closes in as the timer runs out
-      ctx.globalAlpha = 0.25 + k * 0.35;
-      ctx.beginPath(); ctx.arc(z.x, z.y, z.r * (1 - k * 0.85), 0, Math.PI * 2); ctx.fill();
+      // the closing inner ring is the countdown: it meets the edge when the strike lands
+      ctx.globalAlpha = 0.28 + k * 0.4;
+      ctx.beginPath(); ctx.arc(z.x, z.y, Math.max(2, z.r * (1 - k)), 0, Math.PI * 2); ctx.stroke();
+      ctx.globalAlpha = 0.5 + k * 0.4;
+      const t = z.r * 0.12;
+      ctx.beginPath();
+      ctx.moveTo(z.x - t, z.y); ctx.lineTo(z.x + t, z.y);
+      ctx.moveTo(z.x, z.y - t); ctx.lineTo(z.x, z.y + t);
+      ctx.stroke();
       ctx.restore();
     }
   }

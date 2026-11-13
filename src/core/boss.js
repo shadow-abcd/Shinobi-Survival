@@ -296,9 +296,9 @@ function updateWarden(world, b, dt, dist) {
       world.bus.emit('boss:telegraph', { kind: 'slash', x: b.x, y: b.y, angle: b.face, t: 0.6 });
     } else if (b.phase >= 2 && b.next.throw <= 0) {
       b.next.throw = 10;
-      for (let i = 0; i < 6; i++) {
-        const a = (i / 6) * Math.PI * 2;
-        world.spawnZone({ x: p.x + Math.cos(a) * 90, y: p.y + Math.sin(a) * 90, r: 80, delay: 1.0, damage: b.atk * 1.5 * b.dmgMult, color: '#d0d0d0' });
+      for (let i = 0; i < 4; i++) {
+        const a = (i / 4) * Math.PI * 2 + 0.4;
+        world.spawnZone({ x: p.x + Math.cos(a) * 120, y: p.y + Math.sin(a) * 120, r: 85, delay: 1.0, damage: b.atk * 1.5 * b.dmgMult, color: '#e8c07a' });
       }
     } else if (b.phase >= 2 && b.next.spin <= 0) {
       b.next.spin = 15;
