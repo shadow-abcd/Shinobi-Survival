@@ -131,8 +131,6 @@ world.bus.on('counter:reflect', () => audio.counter());
 // FIX Batch 5: Breakthrough + Flow audio.
 world.bus.on('rank:breakthrough', () => audio.breakthrough());
 world.bus.on('flow:start', () => audio.flow());
-// FIX Batch 6: Banish audio.
-world.bus.on('banish', () => audio.banish());
 
 // ---------------- screens ----------------
 // dev helpers: ?warp=<seconds> skips ahead, &god=1 keeps the player alive while skipping
@@ -192,17 +190,12 @@ function handleState() {
   }
   if (world.state === 'levelup' && !menuOpen) {
     menuOpen = true;
-    // FIX Batch 6: Banish does NOT cost the pick — after banishing, re-show the re-rolled menu with the same pick handler.
-    const showMenu = () => ui.showLevelUp(world.player.level, world.pendingChoices, pick, {
-      rank: world.player.rank, banishCharges: world.player.banishCharges,
-      onBanish: (choice) => { if (world.banish(choice)) showMenu(); },
-    });
     const pick = (choice) => {
       world.chooseLevelUp(choice);
-      if (world.state === 'levelup') showMenu();
+      if (world.state === 'levelup') ui.showLevelUp(world.player.level, world.pendingChoices, pick, world.player.rank);
       else menuOpen = false;
     };
-    showMenu();
+    ui.showLevelUp(world.player.level, world.pendingChoices, pick, world.player.rank);
     return;
   }
   if (world.state === 'choice' && AUTO) { world.resumeFight(); return; }
