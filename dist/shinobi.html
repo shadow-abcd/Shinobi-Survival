@@ -190,6 +190,7 @@ canvas#game{display:block;width:100%;height:100%;background:#06050b;}
   </div>
 </div>
 <script type="module">
+/* Shinobi Survival — bundled 2026-11-13T07:06:39.944Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -236,6 +237,12 @@ class RNG {
 // Minimal event bus (memo A4): systems emit and subscribe, they do not read each other.
 class Bus {
   constructor() { this.map = new Map(); this.quiet = false; }
+  // FIX Batch 1 (bug: reset cleared bus, killed audio/renderer):
+  // clear() is now a no-op. Listeners are bound once for the lifetime of
+  // the World (app.js / renderer.js / audio.js) and must survive reset().
+  // World.reset() no longer calls clear() at all. If you really need to
+  // wipe listeners in a test, call bus.map.clear() explicitly.
+  clear() { /* intentionally no-op — see above */ }
   on(type, fn) {
     let a = this.map.get(type);
     if (!a) { a = []; this.map.set(type, a); }
@@ -515,17 +522,21 @@ const ABILITIES = {
 };
 
 // Ten fusion pairs (design §5.4). A pair fires when a hit of one element meets the other's status.
+// FIX Batch 1 (bug: every fusion dealt Fire damage):
+// Each fusion now carries its own element. world.js fireFusion() uses
+// f.element instead of hard-coded 'fire'.
 const FUSIONS = {
-  'fire+wind': { id: 'firestorm', name: 'Firestorm', r: 130, coeff: 1.8, status: 'burning', stacks: 2, color: '#ffd27a' },
-  'fire+water': { id: 'scald', name: 'Scald Veil', r: 120, coeff: 1.5, status: 'drenched', stacks: 1, color: '#ffb9a0' },
-  'fire+earth': { id: 'magma', name: 'Magma Well', r: 150, coeff: 1.6, status: 'burning', stacks: 2, color: '#ff8a4a' },
-  'fire+lightning': { id: 'plasma', name: 'Plasma Lance', r: 110, coeff: 2.2, status: 'stunned', stacks: 1, color: '#ffe98a' },
-  'wind+water': { id: 'frost', name: 'Frost Lattice', r: 140, coeff: 1.4, status: 'frozen', stacks: 1, color: '#bfefff' },
-  'wind+earth': { id: 'ironsand', name: 'Iron Sand', r: 130, coeff: 1.5, status: 'rooted', stacks: 1, color: '#c9a06a' },
-  'wind+lightning': { id: 'thundergale', name: 'Thunder Gale', r: 120, coeff: 2.0, status: 'stunned', stacks: 1, color: '#a8f0ff' },
-  'water+lightning': { id: 'galvanic', name: 'Galvanic Torrent', r: 150, coeff: 2.0, status: 'drenched', stacks: 1, color: '#8fd0ff' },
-  'water+earth': { id: 'verdant', name: 'Verdant Coil', r: 140, coeff: 1.4, status: 'rooted', stacks: 1, color: '#9fd8a0' },
-  'earth+lightning': { id: 'clay', name: 'Detonation Clay', r: 130, coeff: 2.0, status: 'marked', stacks: 1, color: '#ffd27a' },
+  // FIX Batch 3 (fusion matrix): design says Firestorm primes Aerated, not Burning. Fire+Wind -> Aerated.
+  'fire+wind': { id: 'firestorm', name: 'Firestorm', r: 130, coeff: 1.8, status: 'aerated', stacks: 2, color: '#ffd27a', element: 'fire' },
+  'fire+water': { id: 'scald', name: 'Scald Veil', r: 120, coeff: 1.5, status: 'drenched', stacks: 1, color: '#ffb9a0', element: 'water' },
+  'fire+earth': { id: 'magma', name: 'Magma Well', r: 150, coeff: 1.6, status: 'burning', stacks: 2, color: '#ff8a4a', element: 'fire' },
+  'fire+lightning': { id: 'plasma', name: 'Plasma Lance', r: 110, coeff: 2.2, status: 'stunned', stacks: 1, color: '#ffe98a', element: 'lightning' },
+  'wind+water': { id: 'frost', name: 'Frost Lattice', r: 140, coeff: 1.4, status: 'frozen', stacks: 1, color: '#bfefff', element: 'water' },
+  'wind+earth': { id: 'ironsand', name: 'Iron Sand', r: 130, coeff: 1.5, status: 'rooted', stacks: 1, color: '#c9a06a', element: 'earth' },
+  'wind+lightning': { id: 'thundergale', name: 'Thunder Gale', r: 120, coeff: 2.0, status: 'stunned', stacks: 1, color: '#a8f0ff', element: 'lightning' },
+  'water+lightning': { id: 'galvanic', name: 'Galvanic Torrent', r: 150, coeff: 2.0, status: 'drenched', stacks: 1, color: '#8fd0ff', element: 'lightning' },
+  'water+earth': { id: 'verdant', name: 'Verdant Coil', r: 140, coeff: 1.4, status: 'rooted', stacks: 1, color: '#9fd8a0', element: 'earth' },
+  'earth+lightning': { id: 'clay', name: 'Detonation Clay', r: 130, coeff: 2.0, status: 'marked', stacks: 1, color: '#ffd27a', element: 'earth' },
 };
 function fusionKey(a, b) { return a < b ? `${a}+${b}` : `${b}+${a}`; }
 const ULTIMATES = {
@@ -629,37 +640,55 @@ function clearStatus(e, id) {
   const s = e.statuses[id];
   if (s) { s.t = 0; s.stacks = 0; }
 }
-function tickStatuses(world, dt) {
-  const enemies = world.enemies.active;
-  for (let i = enemies.length - 1; i >= 0; i--) {
-    const e = enemies[i];
-    if (!e.alive) continue;
-    // ICD bookkeeping lives on the status object; pair ICDs are keyed on the enemy.
-    for (const k in e.pairIcd) {
-      e.pairIcd[k] -= dt;
-      if (e.pairIcd[k] <= 0) delete e.pairIcd[k];
+
+// FIX Batch 1 (bug: boss statuses never ticked / expired):
+// tickStatuses now ticks BOTH enemies and bosses. Bosses use the same
+// { statuses, pairIcd } shape as enemies, so one helper covers both.
+// Frozen onBreak: when Frozen expires naturally, apply slow (slowT 2s).
+function tickOne(world, e, dt) {
+  if (!e.alive) return;
+  if (!e.pairIcd) e.pairIcd = {};
+  if (!e.statuses) e.statuses = {};
+  // ICD bookkeeping lives on the status object; pair ICDs are keyed on the enemy.
+  for (const k in e.pairIcd) {
+    e.pairIcd[k] -= dt;
+    if (e.pairIcd[k] <= 0) delete e.pairIcd[k];
+  }
+  for (const id in e.statuses) {
+    const s = e.statuses[id];
+    if (s.t <= 0) continue;
+    const def = STATUS[id];
+    if (!def) continue;
+    s.t -= dt;
+    if (def.dotPerStack && s.t > 0) {
+      s.tick -= dt;
+      if (s.tick <= 0) {
+        s.tick += def.dotInterval;
+        // FIX Batch 3 (Burn DoT): crit:false explicitly — Burn is FLAT (design: "Burn stacks add FLAT after multipliers").
+        // world.js also skips all multipliers for dot:true, so this stays flat even if target is Staggered / Nara-marked.
+        world.damageEnemy(e, def.dotPerStack * s.stacks, {
+          element: 'fire', dot: true, silent: false, source: 'burning', crit: false,
+        });
+        if (!e.alive) break;
+      }
     }
-    for (const id in e.statuses) {
-      const s = e.statuses[id];
-      if (s.t <= 0) continue;
-      const def = STATUS[id];
-      s.t -= dt;
-      if (def.dotPerStack && s.t > 0) {
-        s.tick -= dt;
-        if (s.tick <= 0) {
-          s.tick += def.dotInterval;
-          world.damageEnemy(e, def.dotPerStack * s.stacks, {
-            element: 'fire', dot: true, silent: false, source: 'burning',
-          });
-          if (!e.alive) break;
-        }
-      }
-      if (s.t <= 0) {
-        s.t = 0; s.stacks = 0;
-        world.bus.emit('status:expired', { enemy: e, id });
-      }
+    if (s.t <= 0) {
+      s.t = 0; s.stacks = 0;
+      // Frozen onBreak: expiring Frozen leaves the target slowed.
+      if (id === 'frozen' && def.onBreak) e.slowT = def.onBreak.duration;
+      world.bus.emit('status:expired', { enemy: e, id });
     }
   }
+}
+function tickStatuses(world, dt) {
+  const enemies = world.enemies.active || [];
+  for (let i = enemies.length - 1; i >= 0; i--) tickOne(world, enemies[i], dt);
+  // Bosses were missing here — that is why Aerated / Burning / Drenched
+  // on a boss never expired and ICDs never cooled down.
+  const bosses = world.bosses || [];
+  for (let i = bosses.length - 1; i >= 0; i--) tickOne(world, bosses[i], dt);
+  // Single-boss pointer (world.boss) is the same object as bosses[0],
+  // so do NOT tick it again — that would double-tick.
 }
 function statusMoveMult(e) {
   let m = 1;
@@ -709,8 +738,10 @@ const ENEMY_TYPES = {
   },
 };
 function enemyHP(minutes) { return 20 * Math.pow(1.085, minutes); }
-function spawnRate(minutes) { return Math.min(16, 2.0 + 1.05 * minutes); }
-function maxOnScreen(minutes) { return Math.min(900, 130 + 45 * minutes); }
+// FIX Batch 3 (spawn formulas): design is SpawnRate = min(12, 1.5 + 0.9*min), MaxOnScreen = min(900, 120 + 40*min).
+// Code was min(16, 2.0 + 1.05*min) / min(900, 130 + 45*min) — at 10 min: 12.5/s vs 10.5/s (+19%), at 20 min: 16/s cap vs 12/s cap (+33%).
+function spawnRate(minutes) { return Math.min(12, 1.5 + 0.9 * minutes); }
+function maxOnScreen(minutes) { return Math.min(900, 120 + 40 * minutes); }
 function podSize(minutes) { return 3 + Math.min(7, Math.floor(minutes / 4)); }
 
 // SpawnRate(t) is enemies per second. Pairs and small pods add visual variety without
@@ -722,7 +753,9 @@ function spawnPod(world) {
   const dist = world.rng.range(600, 780);
   const cx = world.player.x + Math.cos(ang) * dist;
   const cy = world.player.y + Math.sin(ang) * dist;
-  const n = world.rng.chance(0.3) ? 2 : 1;
+  // FIX Batch 3: spawnPod spawns exactly 1 enemy per call, so SpawnRate(t) IS enemies/sec.
+  // Old code spawned 1-2 (30% chance of 2), so the real rate was 1.15x the formula — the curve never matched the design.
+  const n = 1;
   for (let i = 0; i < n; i++) {
     if (world.enemies.count >= world.maxOnScreen()) break;
     const t = world.rng.weighted(types);
@@ -737,9 +770,13 @@ function updateEnemy(world, e, dt) {
   const def = ENEMY_TYPES[e.type];
 
   if (e.stunT > 0) { e.stunT -= dt; return; }
+  // FIX Batch 2 (Rooted / Stunned never stopped movement):
+  // Stunned = fully stopped (no move, no blink, no fire). Rooted = no move / no blink, but an Archer can still shoot.
+  if (statusActive(e, 'stunned')) return;
+  const moveMult = statusMoveMult(e); // 0 when Rooted, 1 otherwise
 
   let mvx = dx / dist, mvy = dy / dist;
-  let speed = e.speed * (e.slowT > 0 ? 0.5 : 1);
+  let speed = e.speed * (e.slowT > 0 ? 0.5 : 1) * moveMult;
 
   if (def.ranged) {
     if (dist > def.keepMax) { /* approach */ }
@@ -777,8 +814,8 @@ function updateEnemy(world, e, dt) {
   e.x += e.vx * dt;
   e.y += e.vy * dt;
 
-  // shunshin blink: closes distance in a jump
-  if (def.blinkCd) {
+  // shunshin blink: closes distance in a jump — blocked while Rooted (moveMult 0)
+  if (def.blinkCd && moveMult > 0) {
     e.blinkT = (e.blinkT === undefined ? def.blinkCd : e.blinkT) - dt;
     if (e.blinkT <= 0 && dist > 150 && dist < 640) {
       e.blinkT = def.blinkCd;
@@ -842,6 +879,7 @@ function createBoss(world, id) {
     state: T.approach, stateT: 0, next: {}, phase: 1,
     face: 0, flash: 0, statuses: {}, pairIcd: {}, dmgMult: 1,
     kit: def, seals: def.seals, hitAccum: 0, swapDone: false,
+    swapT: 12, armor: id === 'warden' ? 0.6 : 0, slowT: 0, _rooted: false, _stunned: false,
     addsT: 0, enraged: false, enrageAt: 130,
   };
   // per-boss timers
@@ -857,7 +895,14 @@ function updateBoss(world, b, dt) {
   const p = world.player;
   const dx = p.x - b.x, dy = p.y - b.y;
   const dist = Math.hypot(dx, dy) || 1;
-  b.face = Math.atan2(dy, dx);
+  // FIX Batch 2 (Warden armor): face locks during telegraph / strike / vulnerable / dash.
+  // If face always tracked the player, you could never get behind the Warden.
+  const faceLocked = b.id === 'warden' && (b.state === 'telegraph' || b.state === 'strike' || b.state === 'vulnerable' || b.state === 'dash');
+  if (!faceLocked) b.face = Math.atan2(dy, dx);
+  // FIX Batch 2 (Rooted / Stunned): bosses respect statuses.
+  b._stunned = statusActive(b, 'stunned');
+  b._rooted = statusActive(b, 'rooted');
+  if (b.slowT > 0) b.slowT -= dt;
   b.flash = Math.max(0, b.flash - dt * 4);
   b.stateT -= dt;
   b.hitAccum = Math.max(0, b.hitAccum - dt * 0.6);
@@ -872,12 +917,32 @@ function updateBoss(world, b, dt) {
     world.bus.emit('boss:enrage', { x: b.x, y: b.y });
   }
 
-  switch (b.id) {
-    case 'ronin': updateRonin(world, b, dt, dist); break;
+  // Stunned boss: skip its state machine this tick (frozen in place, no attacks).
+  // Phase transitions + contact below still run, so stun is a punish window, not a freeze of the fight.
+  if (!b._stunned) {
+    switch (b.id) {
+      case 'ronin': updateRonin(world, b, dt, dist); break;
     case 'twinRanged': updateTwinRanged(world, b, dt, dist); break;
     case 'twinMelee': updateTwinMelee(world, b, dt, dist); break;
     case 'warden': updateWarden(world, b, dt, dist); break;
-    case 'sovereign': updateSovereign(world, b, dt, dist); break;
+      case 'sovereign': updateSovereign(world, b, dt, dist); break;
+    }
+  }
+
+  // FIX Batch 2 (Twin swap): every ~14s the Twins swap positions.
+  // Only the Bow twin triggers it, so it fires once per cycle, not twice.
+  if (b.id === 'twinRanged' && !b._stunned) {
+    b.swapT = (b.swapT ?? 12) - dt;
+    if (b.swapT <= 0) {
+      const partner = (world.bosses || []).find((o) => o.id === 'twinMelee' && o.alive);
+      if (partner) {
+        const tx = b.x, ty = b.y; b.x = partner.x; b.y = partner.y; partner.x = tx; partner.y = ty;
+        world.bus.emit('boss:swap', { x: b.x, y: b.y });
+        world.bus.emit('boss:blink', { x: b.x, y: b.y });
+        world.bus.emit('boss:blink', { x: partner.x, y: partner.y });
+        b.swapT = 14; partner.swapT = 14;
+      } else b.swapT = 14;
+    }
   }
 
   // phase transitions by HP for Warden / Sovereign
@@ -912,7 +977,10 @@ function w_phase(world, b) {
   if (b.phase === 2) { b.next.combo = 2; b.next.frost = 6; b.next.kirin = 99; }
   if (b.phase === 3) { b.next.kirin = 4; b.next.chain = 3; b.next.combo = 99; b.next.frost = 99; b.next.barrage = 99; b.next.eruption = 99; }
   if (b.phase === 4) {
-    // the finale: telegraphed bomb, then everything speeds up
+    // FIX Batch 2 (Sovereign Phase 4 was empty): the finale now actually fights.
+    // If the player extracts, the run ends. If they stay, Sovereign is faster + harder.
+    b.dmgMult *= 1.15;
+    b.next.barrage = 1; b.next.eruption = 3; b.next.kirin = 4; b.next.chain = 2; b.next.frost = 6; b.next.combo = 99;
     world.spawnZone({ x: b.x, y: b.y, r: 600, delay: 3.0, damage: b.atk * 10 * b.dmgMult, toPlayer: true, color: '#c9a8ff' });
     b.next.bomb = 99;
     for (let i = 0; i < 4; i++) world.spawnEnemy('teleporter', b.x + world.rng.range(-140, 140), b.y + world.rng.range(-140, 140));
@@ -921,6 +989,9 @@ function w_phase(world, b) {
 }
 
 function moveToward(b, p, speed, dt, keep = 0) {
+  // FIX Batch 2: Rooted / Stunned stop boss movement. Slow (Frozen onBreak) halves it.
+  if (b._stunned || b._rooted) return;
+  if (b.slowT > 0) speed *= 0.5;
   const dx = p.x - b.x, dy = p.y - b.y;
   const d = Math.hypot(dx, dy) || 1;
   const s = d > keep ? speed : -speed * 0.5;
@@ -1199,6 +1270,28 @@ function updateSovereign(world, b, dt, dist) {
         world.bus.emit('chain', { x1: b.x, y1: b.y, x2: p.x, y2: p.y });
         world.damagePlayer(b.atk * 1.2 * b.dmgMult, 'boss');
       }
+    } else if (b.phase === 4) {
+      // FIX Batch 2: Phase 4 finale — everything, faster.
+      if (b.next.barrage <= 0) { b.next.barrage = 2; fireVolley3(world, b); }
+      if (b.next.eruption <= 0) {
+        b.next.eruption = 6;
+        for (let i = 0; i < 2; i++) world.spawnZone({ x: p.x + world.rng.range(-160, 160), y: p.y + world.rng.range(-160, 160), r: 110, delay: 1.2, damage: b.atk * 3 * b.dmgMult, color: '#ff7a2f' });
+      }
+      if (b.next.kirin <= 0) {
+        b.next.kirin = 8;
+        world.spawnZone({ x: p.x, y: p.y, r: 130, delay: 1.6, damage: b.atk * 8 * b.dmgMult, color: '#ffe98a' });
+        world.bus.emit('boss:telegraph', { kind: 'kirin', x: p.x, y: p.y, angle: 0, t: 1.6, len: 130 });
+      }
+      if (b.next.chain <= 0) {
+        b.next.chain = 4;
+        world.bus.emit('chain', { x1: b.x, y1: b.y, x2: p.x, y2: p.y });
+        world.damagePlayer(b.atk * 1.2 * b.dmgMult, 'boss');
+      }
+      if (b.next.frost <= 0) {
+        b.next.frost = 10;
+        world.spawnZone({ x: b.x, y: b.y, r: 420, delay: 1.6, damage: b.atk * 4 * b.dmgMult, color: '#bfefff' });
+        world.bus.emit('boss:telegraph', { kind: 'frost', x: b.x, y: b.y, angle: 0, t: 1.6 });
+      }
     }
   }
 }
@@ -1228,6 +1321,51 @@ const PASSIVES = {
 };
 const PASSIVE_SLOTS = 6;
 const ACTIVE_SLOTS = 4;
+
+// FIX Batch 5 (Breakthrough / Rank): design §8.1 — Genin 5/6 passives, Chunin 6/6, Jonin +1 dash charge, Kage Flow State.
+// Rank is player progression, never reversed. Granted by Breakthrough, a level-up MENU OPTION that costs the pick.
+const RANKS = ['genin', 'chunin', 'jonin', 'kage'];
+const RANK_NAMES = { genin: 'Genin', chunin: 'Chunin', jonin: 'Jonin', kage: 'Kage' };
+const BREAKTHROUGH = {
+  chunin: { rank: 'chunin', level: 5, name: 'Breakthrough: Chunin', desc: 'Promote to Chunin. +1 passive slot (6/6). No stat boost — Rank grants unlocks, not boosts.' },
+  jonin: { rank: 'jonin', level: 15, name: 'Breakthrough: Jonin', desc: 'Promote to Jonin. +1 dash charge (2 total).' },
+  kage: { rank: 'kage', level: 25, name: 'Breakthrough: Kage', desc: 'Promote to Kage. Unlocks Flow State: 5s of 70% CDR on Ultimate, once per run.' },
+};
+function passiveSlotsForRank(rank) { return rank === 'genin' ? 5 : 6; }
+function nextBreakthrough(world) {
+  const rank = world.player?.rank || 'genin';
+  const idx = RANKS.indexOf(rank);
+  if (idx < 0 || idx >= RANKS.length - 1) return null;
+  const next = RANKS[idx + 1];
+  const def = BREAKTHROUGH[next];
+  if (!def) return null;
+  if ((world.player?.level || 1) < def.level) return null;
+  return { kind: 'breakthrough', id: 'breakthrough-' + next, rank: next, w: 1, name: def.name, element: 'rank', tag: 'Breakthrough', desc: def.desc };
+}
+
+// FIX Batch 6 (Banish + Post-cap): design C4 + §8.3.
+// Banish: 1 free per run + up to 2 bought in Academy (50 Seals each), max 3 per run.
+// Banish removes ONE offered card from the pool for the rest of the run — it costs a Banish charge, NOT the pick.
+// Post-cap (level 50): XP still fills, but the menu is heal 25% / reroll jutsu / +1 banish charge.
+const BANISH_MAX = 3;
+const BANISH_COST = 50;
+function banishChoice(world, choice) {
+  if (!choice || (choice.kind !== 'ability' && choice.kind !== 'passive')) return false;
+  if ((world.player?.banishCharges || 0) <= 0) return false;
+  if (!world.banished) world.banished = new Set();
+  if (world.banished.has(choice.id)) return false;
+  world.banished.add(choice.id);
+  world.player.banishCharges--;
+  if (world.bus) world.bus.emit('banish', { id: choice.id, kind: choice.kind, charges: world.player.banishCharges });
+  return true;
+}
+function rollPostCapChoices(world) {
+  return [
+    { kind: 'postcap-heal', id: 'postcap-heal', w: 1, name: 'Second Wind', element: 'stat', tag: 'Post-cap', desc: 'Restore 25% of your health.' },
+    { kind: 'postcap-reroll', id: 'postcap-reroll', w: 1, name: 'Reroll Jutsu', element: 'stat', tag: 'Post-cap', desc: 'Swap your lowest-rank jutsu for a new random jutsu at Rank 1. If none available, heal 25% instead.' },
+    { kind: 'postcap-banish', id: 'postcap-banish', w: 1, name: '+1 Banish', element: 'stat', tag: 'Post-cap', desc: 'Gain +1 Banish charge (max 3). If already at max, heal 25% instead.' },
+  ];
+}
 function abilityAvailable(world, id) {
   const def = ABILITIES[id];
   const owned = world.abilities.find((a) => a.id === id);
@@ -1245,22 +1383,34 @@ function passiveCount(world) {
   return world.passives.length;
 }
 function rollChoices(world, n = 3) {
+  // FIX Batch 6: at level cap 50, the menu is post-cap offers, not normal picks.
+  if ((world.player?.level || 1) >= 50) return rollPostCapChoices(world);
   const pool = [];
+  // FIX Batch 4 (clan weighting): design p19 — clan-signature elements get 2x weight in the level-up roll.
+  // Uchiha=Fire, Nara=Earth, Hyuga=Wind, Uzumaki=Water. Lightning has no clan signature — available evenly.
+  // Old code had no clan weighting at all, and a redundant * (owned ? 1 : 1) factor.
+  const CLAN_SIGNATURE = { uchiha: 'fire', nara: 'earth', hyuga: 'wind', uzumaki: 'water' };
+  const signature = CLAN_SIGNATURE[world.clan] || null;
   for (const id in ABILITIES) {
     const def = ABILITIES[id];
+    if (world.banished && world.banished.has(id)) continue;
     if (abilityAvailable(world, id)) {
       const owned = world.abilities.find((a) => a.id === id);
       const tierW = def.tier === 1 ? 2.6 : def.tier === 2 ? 1.9 : 1.1;
+      const clanW = signature && def.element === signature ? 2 : 1;
       pool.push({
-        kind: 'ability', id, w: (owned ? 2.2 : tierW) * (owned ? 1 : 1),
+        kind: 'ability', id, w: (owned ? 2.2 : tierW) * clanW,
         name: ABILITIES[id].name, element: ABILITIES[id].element,
         tag: owned ? `Rank ${owned.rank + 1}` : 'New jutsu',
         desc: ABILITIES[id].desc,
       });
     }
   }
-  if (world.passives.length < PASSIVE_SLOTS) {
+  // FIX Batch 5: Genin can only hold 5 passives. Chunin+ can hold 6.
+  const maxPassives = passiveSlotsForRank(world.player?.rank || 'genin');
+  if (world.passives.length < maxPassives) {
     for (const id in PASSIVES) {
+      if (world.banished && world.banished.has(id)) continue;
       const owned = world.passives.find((p) => p.id === id);
       if (owned && owned.rank >= PASSIVES[id].max) continue;
       pool.push({
@@ -1274,11 +1424,17 @@ function rollChoices(world, n = 3) {
   // Every pool can run dry (all abilities and passives maxed). The design's answer is a
   // heal/reroll card rather than an empty menu.
   if (pool.length === 0) {
-    return [{ kind: 'recover', id: 'recover', w: 1, name: 'Second Wind', element: 'stat', tag: 'Recovery',
-      desc: 'Restore 30% of your health.' }];
+    const bt0 = nextBreakthrough(world);
+    const rec = { kind: 'recover', id: 'recover', w: 1, name: 'Second Wind', element: 'stat', tag: 'Recovery',
+      desc: 'Restore 30% of your health.' };
+    return bt0 ? [bt0, rec] : [rec];
   }
   const picked = [];
   const used = new Set();
+  // FIX Batch 5: Breakthrough is a level-up MENU OPTION, not automatic. It appears as one of the 3 picks when eligible.
+  // If the player skips it (picks another card), it stays available next level-up — Wait vs Promote is the choice.
+  const bt = nextBreakthrough(world);
+  if (bt) { picked.push(bt); used.add(bt.kind + bt.id); }
   // Early build: always offer at least one jutsu until the four slots are full, otherwise
   // the Prime/Detonate loop never starts and the run becomes passives-only.
   if (world.abilities.length < ACTIVE_SLOTS) {
@@ -1299,6 +1455,53 @@ function rollChoices(world, n = 3) {
   return picked;
 }
 function applyChoice(world, choice) {
+  if (choice.kind === 'postcap-heal') {
+    const p = world.player;
+    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25);
+    return;
+  }
+  if (choice.kind === 'postcap-banish') {
+    const p = world.player;
+    if ((p.banishCharges || 0) >= BANISH_MAX) { p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25); return; }
+    p.banishCharges = Math.min(BANISH_MAX, (p.banishCharges || 0) + 1);
+    return;
+  }
+  if (choice.kind === 'postcap-reroll') {
+    // Swap lowest-rank owned jutsu for a new random jutsu at Rank 1. Fallback: heal 25%.
+    const p = world.player;
+    if (!world.abilities.length) { p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25); return; }
+    const sorted = [...world.abilities].sort((a, b) => a.rank - b.rank);
+    const victim = sorted[0];
+    const idx = world.abilities.findIndex((a) => a.id === victim.id);
+    if (idx >= 0) world.abilities.splice(idx, 1);
+    const candidates = [];
+    for (const id in ABILITIES) {
+      if (world.abilities.some((a) => a.id === id)) continue;
+      if (world.banished && world.banished.has(id)) continue;
+      if (id === victim.id) continue;
+      if (abilityAvailable(world, id)) candidates.push(id);
+    }
+    if (!candidates.length) {
+      // No replacement available — put the victim back and heal instead.
+      world.abilities.splice(idx, 0, victim);
+      p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25);
+      return;
+    }
+    const pickId = candidates[Math.floor(world.rng.next() * candidates.length)];
+    const fresh = { id: pickId, rank: 1, cd: 0 };
+    world.abilities.push(fresh);
+    world.bus.emit('ability:gained', fresh);
+    const def = ABILITIES[pickId];
+    fresh.cd = Math.max(0.25, def.cd * (1 - Math.min(0.7, world.player.cdr)));
+    fresh.cdMax = fresh.cd;
+    return;
+  }
+  if (choice.kind === 'breakthrough') {
+    // Promotion itself lives in world.promote() so rank, slots, dash and Flow stay in one place.
+    if (typeof world.promote === 'function') world.promote(choice.rank);
+    else { world.player.rank = choice.rank; world.player.maxPassives = passiveSlotsForRank(choice.rank); }
+    return;
+  }
   if (choice.kind === 'recover') {
     const p = world.player;
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.3);
@@ -1318,6 +1521,8 @@ function applyChoice(world, choice) {
     return;
   }
   let owned = world.passives.find((p) => p.id === choice.id);
+  // FIX Batch 5: never exceed the rank's passive cap (Genin 5, Chunin+ 6) even if applyChoice is called directly.
+  if (!owned && world.passives.length >= passiveSlotsForRank(world.player?.rank || 'genin')) return;
   if (owned) owned.rank = Math.min(PASSIVES[choice.id].max, owned.rank + 1);
   else { owned = { id: choice.id, rank: 1 }; world.passives.push(owned); }
   PASSIVES[choice.id].apply(world.player);
@@ -1357,18 +1562,23 @@ const CLANS = {
   },
 };
 
-// Global stat upgrades: cost escalates per rank.
+// FIX Batch 7 (Academy costs to design §6): Pillar 1 is FLAT costs, not escalating growth.
+// Design: HP +10 flat/node (max 10, 30 Seals each), Chakra +5%/node (max 10, 40 each), Move +2%/node (max 10, 40 each).
+// dmg/mag are extras beyond the design's three — kept, but also flat for consistency.
 const GLOBAL_UPGRADES = {
-  hp: { id: 'hp', name: 'Constitution', desc: '+12 max HP per rank', max: 8, base: 20, growth: 1.55 },
-  dmg: { id: 'dmg', name: 'Chakra Flow', desc: '+6% jutsu damage per rank', max: 8, base: 24, growth: 1.55 },
-  spd: { id: 'spd', name: 'Footwork', desc: '+3% move speed per rank', max: 6, base: 22, growth: 1.5 },
-  mag: { id: 'mag', name: 'Attunement', desc: '+12% pickup radius per rank', max: 6, base: 18, growth: 1.45 },
-  chk: { id: 'chk', name: 'Reserves', desc: '+10% Chakra gain per rank', max: 6, base: 22, growth: 1.5 },
+  hp: { id: 'hp', name: 'Constitution', desc: '+10 max HP per rank', max: 10, flat: 30 },
+  dmg: { id: 'dmg', name: 'Chakra Flow', desc: '+6% jutsu damage per rank', max: 8, flat: 30 },
+  spd: { id: 'spd', name: 'Footwork', desc: '+2% move speed per rank', max: 10, flat: 40 },
+  mag: { id: 'mag', name: 'Attunement', desc: '+12% pickup radius per rank', max: 6, flat: 25 },
+  chk: { id: 'chk', name: 'Reserves', desc: '+5% Chakra gain per rank', max: 10, flat: 40 },
 };
+
+// FIX Batch 7: Clan tree is 5 nodes, 100 Seals each (design §6). Was 4 nodes at 45*1.6^rank + ascension scaling.
 const CLAN_TREE = {
-  ranks: 4,
-  base: 45,
-  growth: 1.6,
+  ranks: 5,
+  base: 100,
+  growth: 1,
+  flat: 100,
   // each rank gives the clan a small bonus in its own direction
   bonus: {
     uchiha: { crit: 0.03 },
@@ -1377,7 +1587,13 @@ const CLAN_TREE = {
     uzumaki: { regen: 0.25 },
   },
 };
-const ARSENAL_COST = { 2: 50, 3: 150 };
+const ARSENAL_COST = { 2: 50, 3: 150, ult: 200 };
+// Ultimates: Cataclysm is the free starter. Susanoo + Toad are 200 Seals each (design §6).
+const ULTIMATES = [
+  { id: 'susanoo', name: 'Susanoo Ribs', desc: '90% reduction, status immunity, +50% damage for 5s.' },
+  { id: 'toad', name: 'Summoning: Toad Sage', desc: 'A toad fights beside you.' },
+];
+const ULTIMATE_COST = 200;
 function defaultSave() {
   return {
     v: 1,
@@ -1394,27 +1610,60 @@ function defaultSave() {
     legacy: { uchiha: false, nara: false, hyuga: false, uzumaki: false },
     ascension: 0,
     bestTime: 0,
+    // FIX Batch 6 (Banish purchases): +1 Banish charge per purchase, max 2 bought, 50 Seals each. In-run charges = 1 + this.
+    banish: 0,
+    // FIX Batch 7: Ultimates owned beyond the free Cataclysm.
+    ultimates: { susanoo: false, toad: false },
   };
 }
+
+// FIX Batch 7 (crash-mid-write): load tries main save, then the backup written by writeSave(). If both fail, fresh save.
 function loadSave(storage) {
-  try {
-    const raw = storage && storage.getItem(SAVE_KEY);
-    if (!raw) return defaultSave();
+  const d = defaultSave();
+  const tryParse = (raw) => {
+    if (!raw) return null;
     const parsed = JSON.parse(raw);
-    return { ...defaultSave(), ...parsed, global: { ...defaultSave().global, ...(parsed.global || {}) } };
+    return { ...d, ...parsed,
+      global: { ...d.global, ...(parsed.global || {}) },
+      ultimates: { ...d.ultimates, ...(parsed.ultimates || {}) },
+      clanTree: { ...d.clanTree, ...(parsed.clanTree || {}) },
+      clans: { ...d.clans, ...(parsed.clans || {}) },
+      legacy: { ...d.legacy, ...(parsed.legacy || {}) },
+      arsenal: { ...(parsed.arsenal || {}) },
+    };
+  };
+  try {
+    const main = storage && tryParse(storage.getItem(SAVE_KEY));
+    if (main) return main;
+    const bak = storage && tryParse(storage.getItem(SAVE_KEY + '.bak'));
+    if (bak) return bak;
+    return d;
   } catch (e) {
-    return defaultSave();
+    try {
+      const bak = storage && tryParse(storage.getItem(SAVE_KEY + '.bak'));
+      if (bak) return bak;
+    } catch (e2) { /* fall through */ }
+    return d;
   }
 }
+
+// FIX Batch 7: write backup first, then main. A crash between the two leaves a valid backup for loadSave() to recover.
 function writeSave(storage, save) {
-  try { storage.setItem(SAVE_KEY, JSON.stringify(save)); return true; } catch (e) { return false; }
+  try {
+    const json = JSON.stringify(save);
+    storage.setItem(SAVE_KEY + '.bak', json);
+    storage.setItem(SAVE_KEY, json);
+    return true;
+  } catch (e) { return false; }
 }
 function costOf(def, rank) {
+  // FIX Batch 7: flat costs (design) return the flat price. Legacy base/growth defs still use the old formula.
+  if (def.flat !== undefined) return def.flat;
   return Math.round(def.base * Math.pow(def.growth, rank));
 }
 function clanTreeCost(save, clan) {
-  const r = save.clanTree[clan] || 0;
-  return Math.round(CLAN_TREE.base * Math.pow(CLAN_TREE.growth, r) * (1 + save.ascension * 0.1));
+  // FIX Batch 7: 100 Seals flat per node, no ascension scaling (design §6).
+  return CLAN_TREE.flat !== undefined ? CLAN_TREE.flat : Math.round(CLAN_TREE.base * Math.pow(CLAN_TREE.growth, save.clanTree[clan] || 0));
 }
 function arsenalUnlocked(save, id) { return !!save.arsenal[id]; }
 function clanUnlocked(save, id) {
@@ -1443,6 +1692,17 @@ function buyArsenal(save, abilityId, tier) {
   save.arsenal[abilityId] = true;
   return { ok: true, cost };
 }
+
+// FIX Batch 7: Ultimates cost 200 Seals each (design §6). Cataclysm is free and not in save.ultimates.
+function buyUltimate(save, id) {
+  if (!ULTIMATES.some((u) => u.id === id)) return { ok: false, reason: 'tier' };
+  if (save.ultimates && save.ultimates[id]) return { ok: false, reason: 'owned' };
+  if (save.seals < ULTIMATE_COST) return { ok: false, reason: 'seals', cost: ULTIMATE_COST };
+  save.seals -= ULTIMATE_COST;
+  if (!save.ultimates) save.ultimates = {};
+  save.ultimates[id] = true;
+  return { ok: true, cost: ULTIMATE_COST };
+}
 function buyClanTree(save, clan) {
   if (!clanUnlocked(save, clan)) return { ok: false, reason: 'locked' };
   const r = save.clanTree[clan] || 0;
@@ -1454,6 +1714,18 @@ function buyClanTree(save, clan) {
   // Completing a clan tree contributes its Legacy trait to every clan (memo C1/C2).
   if (save.clanTree[clan] >= CLAN_TREE.ranks) save.legacy[clan] = true;
   return { ok: true, cost };
+}
+
+// FIX Batch 6: Banish purchase — 50 Seals, max 2 bought (so max in-run charges = 1 free + 2 = 3).
+const BANISH_COST = 50;
+const BANISH_MAX_BOUGHT = 2;
+function buyBanish(save) {
+  const bought = save.banish || 0;
+  if (bought >= BANISH_MAX_BOUGHT) return { ok: false, reason: 'maxed' };
+  if (save.seals < BANISH_COST) return { ok: false, reason: 'seals', cost: BANISH_COST };
+  save.seals -= BANISH_COST;
+  save.banish = bought + 1;
+  return { ok: true, cost: BANISH_COST };
 }
 function selectClan(save, clan) {
   if (!clanUnlocked(save, clan)) return { ok: false, reason: 'locked' };
@@ -1469,10 +1741,14 @@ function metaModifiers(save) {
   const bonus = CLAN_TREE.bonus[save.clan] || {};
   return {
     clan: clan.id,
-    maxHp: Math.round(170 * clan.hp) + (g.hp || 0) * 12 + (bonus.hp || 0) * 170,
-    speedMult: clan.speed * (1 + (g.spd || 0) * 0.03),
-    chakraMult: clan.chakra * (1 + (g.chk || 0) * 0.10),
-    dmgMult: 1 + (g.dmg || 0) * 0.06 + (perfectShinobi(save) ? 0.10 : 0),
+    // FIX Batch 2: base HP is 150 per design, not 170 (Uchiha was getting 136 instead of 120).
+    // FIX Batch 7: Academy bonuses to design — HP +10/node, Speed +2%/node, Chakra +5%/node (was +12, +3%, +10%).
+    maxHp: Math.round(150 * clan.hp) + (g.hp || 0) * 10 + (bonus.hp || 0) * 150,
+    speedMult: clan.speed * (1 + (g.spd || 0) * 0.02),
+    chakraMult: clan.chakra * (1 + (g.chk || 0) * 0.05),
+    // FIX Batch 2 (Legacy only paid on Perfect Shinobi): each Legacy now gives +2.5% damage.
+    // 4 Legacies = +10%, same as Perfect before, but 1-3 Legacies now do something.
+    dmgMult: 1 + (g.dmg || 0) * 0.06 + Object.values(save.legacy).filter(Boolean).length * 0.025,
     magnetMult: 1 + (g.mag || 0) * 0.12,
     crit: 0.05 + (bonus.crit || 0) * tree,
     regen: (bonus.regen || 0) * tree,
@@ -1486,7 +1762,8 @@ function metaModifiers(save) {
   };
 }
 function sealsForRun({ win, extracted, bosses, time, level }) {
-  let seals = bosses * 1 + Math.floor(time / 60) * 2 + Math.round(level * 0.6);
+  // FIX Batch 2: removed bosses*1 double-count (boss Seals were counted twice: once here, once in bossSeals below).
+  let seals = Math.floor(time / 60) * 2 + Math.round(level * 0.6);
   // boss rewards per the design table, scaled by how far the run got
   const bossSeals = [20, 40, 60, 100];
   for (let i = 0; i < Math.min(bosses, 4); i++) seals += bossSeals[i];
@@ -1504,7 +1781,8 @@ function bankRun(save, result) {
   save.bestTime = Math.max(save.bestTime, result.time);
   if (result.win) {
     save.wins += 1;
-    save.ascension = Math.min(9, save.ascension + 1);
+    // FIX Batch 2: Ascension has no ceiling per design — removed the cap at 9.
+    save.ascension = save.ascension + 1;
   }
   // clan unlocks at survive-time milestones (memo C6)
   for (const id in CLANS) {
@@ -1531,7 +1809,8 @@ class World {
   reset(seed, save) {
     this.save = save || this.save || null;
     this.rng = new RNG(seed);
-    this.bus.clear ? this.bus.clear() : (this.bus.map.clear());
+    // FIX Batch 1: do NOT clear bus here. App / renderer / audio listeners
+    // are bound once and must survive reset(). Bus.clear() is now a no-op.
     this.t = 0;
     this.frame = 0;
     this.state = 'playing';
@@ -1565,7 +1844,12 @@ class World {
       x: 0, y: 0, vx: 0, vy: 0, r: 13,
       hp: 150, maxHp: 150, speedMult: 1, dmgMult: 1, cdr: 0, crit: 0.05, magnetMult: 1,
       atk: 10, facing: { x: 1, y: 0 },
-      level: 1, xp: 0, xpNeed: 18, chakra: 0, overcharge: false,
+      // FIX Batch 4 (XP curve): design is XP to level N = 15 * 1.12^(N-1). Was 18 * 1.13^(N-1) — ~2x too slow at level 40.
+      level: 1, xp: 0, xpNeed: 15, chakra: 0, overcharge: false,
+      // FIX Batch 5 (Rank): Genin 5 passives / 1 dash, Chunin 6 passives, Jonin 2 dashes, Kage Flow State.
+      rank: 'genin', maxPassives: 5, dashMax: 1, dashCharges: 1, flowUnlocked: false, flowUsed: false, flowT: 0,
+      // FIX Batch 6 (Banish): 1 free per run + Academy purchases (save.banish 0-2), max 3. Set in reset() from save.
+      banishCharges: 1,
       dashCd: 0, dashT: 0, iframe: 0, dashDir: { x: 1, y: 0 },
       hitFlash: 0, invulnFlash: 0, moving: false, kills: 0, regenT: 0,
     };
@@ -1575,6 +1859,9 @@ class World {
       regen: 0, slow: 0, legacy: false,
     };
     this.meta = m;
+    // FIX Batch 6: Banish pool starts empty each run. Charges = 1 free + Academy-bought (save.banish), capped at 3.
+    this.banished = new Set();
+    this.player.banishCharges = Math.min(3, 1 + (this.save?.banish || 0));
     const p0 = this.player;
     p0.maxHp = m.maxHp; p0.hp = m.maxHp;
     p0.speedMult = m.speedMult; p0.dmgMult = m.dmgMult; p0.magnetMult = m.magnetMult; p0.crit = m.crit;
@@ -1656,6 +1943,10 @@ class World {
     t.push({ id: 'fodder', w: 10 });
     if (min > 2.2) t.push({ id: 'brute', w: 1.6 + min * 0.10 });
     if (min > 3.2) t.push({ id: 'archer', w: 2.2 });
+    // FIX Batch 1 (bug: elites never spawned in normal spawner):
+    // Shunshin + Siphoner appear from minute 9, rare but present.
+    if (min > 9) t.push({ id: 'teleporter', w: 0.9 });
+    if (min > 9) t.push({ id: 'siphoner', w: 0.9 });
     return t;
   }
 
@@ -1667,10 +1958,27 @@ class World {
   recalc() {
     const p = this.player;
     p.cdr = Math.min(0.7, p.cdr);
+    // FIX Batch 5 (Flow State): while Flow is active, effective CDR is 70% regardless of base CDR.
+    const effCdr = p.flowT > 0 ? 0.7 : p.cdr;
     for (const ab of this.abilities) {
       const base = ABILITIES[ab.id].cd;
-      ab.cdMax = Math.max(0.2, base * (1 - p.cdr));
+      ab.cdMax = Math.max(0.2, base * (1 - effCdr));
     }
+  }
+
+  // FIX Batch 5 (Breakthrough): promotion is sequential, never reversed, no stat boost.
+  promote(rank) {
+    const order = ['genin', 'chunin', 'jonin', 'kage'];
+    const cur = order.indexOf(this.player.rank || 'genin');
+    const next = order.indexOf(rank);
+    if (next !== cur + 1) return false;
+    this.player.rank = rank;
+    if (rank === 'chunin') this.player.maxPassives = 6;
+    if (rank === 'jonin') { this.player.dashMax = 2; this.player.dashCharges = 2; this.player.dashCd = 0; }
+    if (rank === 'kage') this.player.flowUnlocked = true;
+    this.bus.emit('rank:breakthrough', { rank });
+    this.recalc();
+    return true;
   }
 
   // ---------- spawning ----------
@@ -1863,21 +2171,38 @@ class World {
         applyStatus(this, e, 'staggered', { stacks: 1, source: 'clan' });
       }
     }
-    if (this.naraSlow && e.naraMarked) dmg *= 1.10;
+    // FIX Batch 3 (Burn DoT is FLAT): Nara + Staggered multipliers do NOT apply to DoT. Design: Burn stacks add FLAT after multipliers.
+    if (!opts.dot && this.naraSlow && e.naraMarked) dmg *= 1.10;
 
     // step 7 — damage calculation
-    dmg *= statusDamageTakenMult(e);
+    if (!opts.dot) dmg *= statusDamageTakenMult(e);
     if (crit) dmg *= 1.5;
     if (det) dmg *= det.def.detonateMult;
+    // FIX Batch 2 (Warden front armor): 60% blocked from the front, full from behind, none when vulnerable.
+    // Front = within 90 deg of the Warden's facing. Facing locks during telegraph (boss.js), so circling behind is the counterplay.
+    // DoT is not directional — Warden front armor does not block Burning ticks.
+    if (!opts.dot && e.isBoss && e.id === 'warden' && e.state !== 'vulnerable' && e.state !== 'dead') {
+      const angToPlayer = Math.atan2(p.y - e.y, p.x - e.x);
+      let diff = angToPlayer - (e.face || 0);
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      if (Math.abs(diff) < Math.PI / 2) {
+        const before = dmg;
+        dmg *= 0.4;
+        if (before > 0) this.bus.emit('boss:armor', { x: e.x, y: e.y, blocked: before - dmg });
+      }
+    }
 
-    // boss counter stance reflects 50%
+    // FIX Batch 1 (bug: Ronin counter was flat 9 damage):
+    // Counter reflects 50% of the damage that would have been dealt.
     if (e.isBoss && e.state === 'counter') {
-      this.damagePlayer(RONIN_DAMAGE, 'counter');
+      this.damagePlayer(dmg * 0.5, 'counter');
       e.flash = 1;
       this.bus.emit('counter:reflect', { x: e.x, y: e.y });
       return 0;
     }
 
+    const hpBefore = e.hp;
     e.hp -= dmg;
     e.flash = 1;
     this.damageDealt += dmg;
@@ -1894,7 +2219,7 @@ class World {
       }
     }
 
-    if (e.hp <= 0) this.killEnemy(e, opts);
+    if (e.hp <= 0) this.killEnemy(e, { ...opts, hpBefore });
     return dmg;
   }
 
@@ -1903,6 +2228,9 @@ class World {
     // D1: the trigger status is removed, and cannot be re-applied by this detonation.
     const s = e.statuses[det.id];
     s.t = 0; s.stacks = 0;
+    // FIX Batch 1 (bug: Frozen onBreak never applied):
+    // Shattering Frozen leaves the target slowed for 2s.
+    if (det.id === 'frozen' && def.onBreak) e.slowT = def.onBreak.duration;
     this.bus.emit('detonate', {
       x: e.x, y: e.y, status: det.id, element: opts.element, r: def.spread ? 130 : 110,
     });
@@ -1929,10 +2257,25 @@ class World {
     if (e.pairIcd[icd] > 0) return;
     e.pairIcd[icd] = 2.5;
     const f = FUSIONS[key];
+    // FIX Batch 3 (fusion scaling): fusion damage now scales with the parents' ranks.
+    // Old code was calcDamage(coeff, 1) * 0.6 — always Rank 1, always 40% nerfed — so a R5+R5 build fused for the same damage as R1+R1.
+    // Now: average rank of the highest owned ability of each element in the pair. Fallback 3 = min rank to unlock fusion per design,
+    // so Cataclysm / status-only triggers (no owned abilities) still fuse at a sane value and the combat test still passes.
+    const [elA, elB] = key.split('+');
+    const rankFor = (el) => {
+      let best = 0;
+      for (const a of this.abilities) {
+        const def = ABILITIES[a.id];
+        if (def && def.element === el) best = Math.max(best, a.rank);
+      }
+      return best;
+    };
+    const rA = rankFor(elA), rB = rankFor(elB);
+    const fusionRank = (rA > 0 && rB > 0) ? Math.max(1, Math.round((rA + rB) / 2)) : 3;
     this.spawnBurst({
       x: e.x, y: e.y, r: f.r, life: 0.45,
-      damage: this.calcDamage(f.coeff, 1) * 0.6,
-      element: 'fire', status: f.status, statusStacks: f.stacks, color: f.color,
+      damage: this.calcDamage(f.coeff, fusionRank),
+      element: f.element || 'fire', status: f.status, statusStacks: f.stacks, color: f.color,
     });
     this.shake = Math.min(10, this.shake + 2.5);
     this.hitstop = Math.max(this.hitstop, 0.06);
@@ -1954,8 +2297,27 @@ class World {
     this.player.kills++;
     this.kills++;
     this.addChakra(isElite ? 10 : 1);
-    if (this.clan === 'uzumaki' && e.hp < e.maxHp * 0.3) {
+    // FIX Batch 1 (bug: Uzumaki heal always true):
+    // Old code checked e.hp < 30% AFTER death (e.hp <= 0, always true).
+    // Now check hp BEFORE the killing blow, passed in as opts.hpBefore.
+    const hpBeforeKill = opts.hpBefore !== undefined ? opts.hpBefore : e.hp;
+    if (this.clan === 'uzumaki' && hpBeforeKill < e.maxHp * 0.3) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 2);
+    }
+    // FIX Batch 1 (bug: Marked onDeathChain never fired):
+    // A Marked enemy that dies chains to up to 2 neighbours.
+    if (e.statuses && e.statuses.marked && e.statuses.marked.t > 0 && !opts.noChain) {
+      e.statuses.marked.t = 0; e.statuses.marked.stacks = 0;
+      this.grid.queryCircle(e.x, e.y, 150, this._sB);
+      let chained = 0;
+      for (let i = 0; i < this._sB.length && chained < 2; i++) {
+        const o = this._sB[i];
+        if (o === e || !o.alive) continue;
+        if ((o.x - e.x) ** 2 + (o.y - e.y) ** 2 > 150 * 150) continue;
+        this.bus.emit('chain', { x1: e.x, y1: e.y, x2: o.x, y2: o.y });
+        this.damageEnemy(o, e.maxHp * 0.2, { element: 'earth', noChain: true, source: 'marked-chain' });
+        chained++;
+      }
     }
     this.bus.emit('kill', { x: e.x, y: e.y, type: e.type, r: e.r, color: def.color });
   }
@@ -2334,6 +2696,12 @@ class World {
     p.chakra = 0;
     p.overcharge = false;
     const id = this.ultimate || 'cataclysm';
+    // FIX Batch 5 (Flow State): Kage only, once per run, 5s of 70% CDR on Ultimate.
+    if (p.flowUnlocked && !p.flowUsed) {
+      p.flowUsed = true; p.flowT = 5.0;
+      this.bus.emit('flow:start', { t: 5.0 });
+      this.recalc();
+    }
     if (id === 'susanoo') this.addBuff('susanoo', 5.0);
     else if (id === 'toad') this.summonToad();
     else this.castCataclysm();
@@ -2353,12 +2721,19 @@ class World {
     for (const e of list) {
       if (!e.alive) continue;
       if ((e.x - at.x) ** 2 + (e.y - at.y) ** 2 > (r + e.r) ** 2) continue;
-      for (const id of ['aerated', 'burning', 'drenched', 'rooted']) {
-        applyStatus(this, e, id, { stacks: 3, source: 'cataclysm' });
+      // FIX Batch 3 (Cataclysm): design is "ALL statuses at max stacks, every pair detonated".
+      // Old code applied only 4 of 8 statuses, at a flat 3 stacks (Burning max is 5, Drenched/Rooted max is 1) and only 3 hits.
+      // Now: every status in the registry at its own maxStacks, then 5 hits that detonate every detonatable status:
+      // Fire -> Aerated, Wind -> Burning, Lightning -> Drenched, Physical -> Frozen (shatter), Wind -> Rooted (second Wind, after Burning is consumed).
+      for (const id of Object.keys(STATUS)) {
+        applyStatus(this, e, id, { stacks: STATUS[id].maxStacks, source: 'cataclysm' });
       }
-      this.damageEnemy(e, this.calcDamage(20, 1) / 3, { element: 'fire', crit: false });
-      this.damageEnemy(e, this.calcDamage(20, 1) / 3, { element: 'wind', crit: false });
-      this.damageEnemy(e, this.calcDamage(20, 1) / 3, { element: 'lightning', crit: false });
+      const each = this.calcDamage(20, 1) / 5; // total still 20x ATK, split across the 5 detonating hits
+      this.damageEnemy(e, each, { element: 'fire', crit: false });
+      this.damageEnemy(e, each, { element: 'wind', crit: false });
+      this.damageEnemy(e, each, { element: 'lightning', crit: false });
+      this.damageEnemy(e, each, { element: 'physical', crit: false });
+      this.damageEnemy(e, each, { element: 'wind', crit: false });
     }
     this.spawnBurst({ x: at.x, y: at.y, r, life: 0.8, damage: 0, element: 'fire', status: null, statusStacks: 0, color: '#ffd27a', ultimate: true });
   }
@@ -2373,12 +2748,20 @@ class World {
       p.level++;
       p.maxHp += 2;                                     // a shinobi grows into the run
       p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.08 + 2);
-      p.xpNeed = Math.round(18 * Math.pow(1.13, p.level - 1));
+      p.xpNeed = Math.round(15 * Math.pow(1.12, p.level - 1));
       this.pendingLevels++;
       leveled = true;
     }
+    // FIX Batch 6 (Post-cap): at level 50, XP still fills. Each full bar triggers a post-cap menu (heal / reroll / +1 banish),
+    // not a normal level-up. rollChoices() returns post-cap choices when level >= 50.
+    let postCap = false;
+    if (p.level >= 50 && p.xp >= p.xpNeed) {
+      p.xp -= p.xpNeed;
+      postCap = true;
+    }
     if (p.level >= 50) p.xp = Math.min(p.xp, p.xpNeed);
-    if (leveled && this.state === 'playing') {
+    if ((leveled || postCap) && this.state === 'playing') {
+      if (postCap) this.pendingLevels++;
       this.state = 'levelup';
       this.pendingChoices = rollChoices(this, 3);
       this.bus.emit('levelup', { level: p.level, choices: this.pendingChoices });
@@ -2397,6 +2780,15 @@ class World {
       this.state = 'playing';
       this.bus.emit('levelup:done', {});
     }
+  }
+
+  // FIX Batch 6 (Banish): remove one offered card from the pool for the rest of the run. Costs a Banish charge, NOT the pick.
+  // After banishing, the menu re-rolls to 3 fresh choices (the banished id is filtered out by rollChoices).
+  banish(choice) {
+    if (!banishChoice(this, choice)) return false;
+    this.pendingChoices = rollChoices(this, 3);
+    this.bus.emit('levelup', { level: this.player.level, choices: this.pendingChoices });
+    return true;
   }
 
   // ---------- one logic tick ----------
@@ -2424,18 +2816,35 @@ class World {
       p.x += p.vx * dt;
       p.y += p.vy * dt;
     }
-    if (inp.dash && p.dashCd <= 0) {
-      p.dashCd = 1.8;
-      p.dashT = 0.16;
-      p.iframe = 0.30;
-      p.dashDir = p.moving ? { x: ix, y: iy } : { ...p.facing };
-      this.bus.emit('dash', { x: p.x, y: p.y });
+    // FIX Batch 1 (bug: dash sticky / auto-dash every 1.8s):
+    // Consume the press. One press = one dash, even if the key / button
+    // stays held. app.js sets input.dash=true on keydown / button tap.
+    // FIX Batch 5 (dash charges): Genin 1 charge, Jonin 2. One charge per 1.8s recharge.
+    // dashCd is now "time until next charge". When charges > 0, dashCd is 0 so the bot's dashCd<=0 check still means "can dash".
+    if (inp.dash) {
+      inp.dash = false;
+      if (p.dashCharges > 0) {
+        p.dashCharges--;
+        if (p.dashCharges < p.dashMax) p.dashCd = 1.8;
+        p.dashT = 0.16;
+        p.iframe = 0.30;
+        p.dashDir = p.moving ? { x: ix, y: iy } : { ...p.facing };
+        this.bus.emit('dash', { x: p.x, y: p.y });
+      }
     }
     if (inp.ult) { inp.ult = false; this.castUltimate(); }
     // Out-of-combat recovery: 4 s clean, then a slow trickle. Rewards clean kiting.
     p.regenT = p.hitFlash > 0 ? 0 : p.regenT + dt;
     if (p.regenT > 4 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 1.1 * dt);
-    p.dashCd = Math.max(0, p.dashCd - dt);
+    // FIX Batch 2 (Uzumaki regen was dead): clanRegen was computed in meta.js but never used.
+    // Uzumaki clan tree regen (0.25 / rank, up to 1.0 HP/s) now actually heals, always.
+    if (this.clanRegen > 0 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + this.clanRegen * dt);
+    // Dash recharge + Flow timer. Flow expiry calls recalc so CDR drops back to base.
+    if (p.dashCharges < p.dashMax) {
+      p.dashCd = Math.max(0, p.dashCd - dt);
+      if (p.dashCd <= 0) { p.dashCharges++; if (p.dashCharges < p.dashMax) p.dashCd = 1.8; else p.dashCd = 0; }
+    } else p.dashCd = 0;
+    if (p.flowT > 0) { p.flowT = Math.max(0, p.flowT - dt); if (p.flowT === 0) { this.bus.emit('flow:end', {}); this.recalc(); } }
     p.iframe = Math.max(0, p.iframe - dt);
     p.hitFlash = Math.max(0, p.hitFlash - dt * 3);
     this.shake = Math.max(0, this.shake - dt * 22);
@@ -2772,7 +3181,7 @@ class World {
   }
 }
 
-const RONIN_DAMAGE = 9;
+// RONIN_DAMAGE removed in Batch 1 — counter now reflects 50% of incoming damage.
 
 
 /* ---- src/render/sprites.js ---- */
@@ -3111,11 +3520,50 @@ function waterCloneSprite(r) {
   g.beginPath(); g.ellipse(cx, cy - r * 0.2, r * 0.45, r * 0.14, 0, 0, Math.PI * 2); g.fill();
   return c;
 }
+
+function teleporterSprite(r) {
+  // Shunshin: purple cloak + blink ring, so it never looks like fodder.
+  const { c, g } = makeCanvas((r + 12) * 2, (r + 12) * 2);
+  const cx = r + 12, cy = r + 12;
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  g.beginPath(); g.ellipse(cx, cy + r * 0.6, r * 0.92, r * 0.4, 0, 0, Math.PI * 2); g.fill();
+  const grd = g.createRadialGradient(cx - r * 0.3, cy - r * 0.4, r * 0.2, cx, cy, r);
+  grd.addColorStop(0, '#7a5fd8'); grd.addColorStop(0.7, '#4b3a7a'); grd.addColorStop(1, '#241a4a');
+  g.fillStyle = grd; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(183,155,255,0.95)'; g.lineWidth = 2;
+  g.beginPath(); g.arc(cx, cy, r + 5, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = '#e6dcff';
+  g.beginPath(); g.arc(cx - r * 0.22, cy, 2, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(cx + r * 0.22, cy, 2, 0, Math.PI * 2); g.fill();
+  return c;
+}
+function siphonerSprite(r) {
+  // Siphoner: teal cloak + drain tendrils.
+  const { c, g } = makeCanvas((r + 12) * 2, (r + 12) * 2);
+  const cx = r + 12, cy = r + 12;
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  g.beginPath(); g.ellipse(cx, cy + r * 0.6, r * 0.92, r * 0.4, 0, 0, Math.PI * 2); g.fill();
+  const grd = g.createRadialGradient(cx - r * 0.3, cy - r * 0.4, r * 0.2, cx, cy, r);
+  grd.addColorStop(0, '#3a9a8a'); grd.addColorStop(0.7, '#1f4a44'); grd.addColorStop(1, '#0a241f');
+  g.fillStyle = grd; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(95,232,200,0.9)'; g.lineWidth = 1.6;
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4;
+    g.beginPath(); g.moveTo(cx + Math.cos(a) * r * 0.5, cy + Math.sin(a) * r * 0.5);
+    g.lineTo(cx + Math.cos(a) * (r + 6), cy + Math.sin(a) * (r + 6)); g.stroke();
+  }
+  g.fillStyle = '#c8fff0';
+  g.beginPath(); g.arc(cx, cy, 2.2, 0, Math.PI * 2); g.fill();
+  return c;
+}
 function buildSprites() {
   const S = {};
   S.fodder = enemySprite('fodder', '#a8455f', '#ff7f9b', 13);
   S.brute = enemySprite('brute', '#6f2f4a', '#ff9a7f', 21);
   S.archer = enemySprite('archer', '#3d5a7a', '#7fc4ff', 12);
+  // FIX Batch 1: elites had no sprite and rendered as fodder.
+  S.teleporter = teleporterSprite(15);
+  S.siphoner = siphonerSprite(14);
   S.player = playerSprite(13);
   S.toad = toadSprite(30);
   S.golem = golemSprite(20);
@@ -3357,6 +3805,15 @@ class Renderer {
     b.on('boss:slash', (e) => this.slashes.push({ ...e, life: 0.28, total: 0.28 }));
     b.on('boss:counter', (e) => this.auras.push({ x: e.x, y: e.y, life: 2.8, total: 2.8 }));
     b.on('boss:spawn', () => { this.ring(this.world.player.x, this.world.player.y, 40, 480, 0.9, '#ff6b6b', 5); });
+    // FIX Batch 1: boss events that had no VFX now have one.
+    // 'blink' already covers enemy Shunshin (enemies.js). Boss Twin also emits 'boss:blink'.
+    b.on('boss:blink', (e) => this.ring(e.x, e.y, 4, 40, 0.3, '#b79bff', 2));
+    b.on('boss:death', (e) => { this.ring(e.x, e.y, 20, 320, 0.7, '#ffd27a', 5); for (let i = 0; i < 24; i++) this.spark(e.x, e.y, '#ffd27a', 4); });
+    b.on('boss:absorb', (e) => this.ring(this.world.player.x, this.world.player.y, 20, 260, 0.6, '#ff6b8a', 4));
+    b.on('boss:phase', (e) => this.ring(e.boss ? e.boss.x : this.world.player.x, e.boss ? e.boss.y : this.world.player.y, 10, 180, 0.5, '#c9a8ff', 3));
+    // FIX Batch 2: Warden armor + Twin swap now have feedback.
+    b.on('boss:armor', (e) => { for (let i = 0; i < 3; i++) this.spark(e.x, e.y, '#c9a8ff', 1.2); });
+    b.on('boss:swap', (e) => this.ring(e.x, e.y, 10, 90, 0.4, '#b79bff', 3));
     b.on('field:clear', () => { this.ring(this.world.player.x, this.world.player.y, 60, 520, 0.7, '#ffe6b0', 4); });
     b.on('ultimate', (e) => {
       this.ring(e.x, e.y, 20, 430, 0.6, '#ff9a3c', 8);
@@ -3369,7 +3826,7 @@ class Renderer {
     b.on('thorns', (e) => this.ring(e.x, e.y, 20, 120, 0.25, '#ffe98a', 2));
     b.on('barrier', (e) => this.ring(e.x, e.y, e.r * 0.6, e.r, 0.5, '#c08a4a', 3));
     b.on('summon', (e) => this.ring(e.x, e.y, 10, 60, 0.4, e.kind === 'toad' ? '#8fd8a0' : '#9fd8ff', 2));
-    b.on('fusion', (e) => this.ring(e.x, e.y, 20, 150, 0.5, '#ffd27a', 4));
+    // FIX Batch 1: duplicate 'fusion' listener removed (was drawing 2 identical rings).
     b.on('buff', () => {});
     b.on('status:applied', (e) => {
       const def = STATUS[e.id];
@@ -3480,8 +3937,14 @@ class Renderer {
   drawFields(dt) {
     const ctx = this.ctx;
     const S = this.sprites;
+    // FIX Batch 1 (bug: every field looked like fire):
+    // Field tint + glow now follow f.element.
+    const FIELD_COLOR = { fire: '#ff7a2f', water: '#63b7ff', lightning: '#ffe98a', earth: '#c08a4a', wind: '#5fe8c8' };
+    const FIELD_GLOW = { fire: S.glowFire, water: S.glowGold, lightning: S.glowGold, earth: S.glowGold, wind: S.glowWind };
     for (const f of this.world.fields.active) {
       const k = Math.max(0, f.life / 4);
+      const fCol = FIELD_COLOR[f.element] || '#ff7a2f';
+      const fGlow = FIELD_GLOW[f.element] || S.glowFire;
       if (f.kind === 'clone') {
         ctx.globalAlpha = 0.9;
         ctx.drawImage(S.player, f.x - 27, f.y - 27, 54, 54);
@@ -3494,11 +3957,11 @@ class Renderer {
       const pulse = 0.75 + Math.sin(performance.now() / 90 + f.x) * 0.12;
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.30 * Math.min(1, k * 1.6) * pulse;
-      ctx.drawImage(S.glowFire, f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
+      ctx.drawImage(fGlow, f.x - f.r, f.y - f.r, f.r * 2, f.r * 2);
       ctx.globalCompositeOperation = 'source-over';
       ctx.globalAlpha = 1;
       // flame tongues
-      ctx.strokeStyle = 'rgba(255,140,60,0.55)';
+      ctx.strokeStyle = hexA(fCol, 0.55);
       ctx.lineWidth = 2;
       for (let i = 0; i < 3; i++) {
         const a = (i / 3) * Math.PI * 2 + f.life * 2;
@@ -3740,6 +4203,23 @@ class Renderer {
     const sprite = S[b.id] || S.bossRonin || S.boss;
     const size = b.r * 3.4;
     const bob = Math.sin(this.world.t * 3) * 2;
+    // FIX Batch 1 (bug: boss statuses invisible):
+    // Same glows as enemies, so Aerated / Burning on a boss is readable.
+    const aer = b.statuses && b.statuses.aerated, burn = b.statuses && b.statuses.burning;
+    if (aer && aer.t > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.42;
+      ctx.drawImage(S.glowWind, b.x - 50, b.y - 50, 100, 100);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
+    if (burn && burn.t > 0) {
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = 0.30 + Math.min(0.3, burn.stacks * 0.06);
+      ctx.drawImage(S.glowFire, b.x - 46, b.y - 50, 92, 92);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.globalAlpha = 1;
+    }
 
     // counter stance aura
     if (b.state === 'counter' || b.phase === 3) {
@@ -3771,6 +4251,34 @@ class Renderer {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(0, -8); ctx.lineTo(0, -b.r - 46); ctx.stroke();
     ctx.restore();
+
+    // Boss status pips (same as enemies, below the boss)
+    if (b.statuses) {
+      let pip = 0;
+      for (const sid in b.statuses) {
+        const st = b.statuses[sid];
+        if (!st || st.t <= 0) continue;
+        const def = STATUS[sid];
+        if (!def || pip >= 4) continue;
+        const px = b.x - b.r + pip * 8;
+        const py = b.y + b.r + 10;
+        ctx.fillStyle = def.color;
+        ctx.globalAlpha = 0.95;
+        ctx.beginPath(); ctx.arc(px, py, 2.8, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+        pip++;
+      }
+    }
+
+    // FIX Batch 2: Warden front armor is visible — a shield arc on the front 180 deg.
+    // No arc when vulnerable: that is when you hit him from anywhere.
+    if (b.id === 'warden' && b.state !== 'vulnerable' && b.alive) {
+      ctx.strokeStyle = 'rgba(201,168,255,0.85)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r + 8, (b.face || 0) - Math.PI / 2, (b.face || 0) + Math.PI / 2);
+      ctx.stroke();
+    }
 
     if (b.flash > 0.02) {
       ctx.globalCompositeOperation = 'lighter';
@@ -4109,6 +4617,25 @@ function academyHTML(save) {
     </div>`;
   }).join('');
 
+  // FIX Batch 6 (Banish purchases): +1 Banish charge per run, 50 Seals each, max 2 bought (max 3 per run total).
+  const banishBought = save.banish || 0;
+  const banishMaxed = banishBought >= BANISH_MAX_BOUGHT;
+  const banishRow = `<div class="acad-row ${banishMaxed ? 'maxed' : ''}" data-kind="banish" data-id="banish">
+      <div class="ar-name">Banish Charge<span class="ar-rank">${banishBought}/${BANISH_MAX_BOUGHT}</span></div>
+      <div class="ar-desc">+1 Banish charge per run (1 free + bought). Banish removes an offered card from the pool for the run.</div>
+      <div class="ar-cost">${banishMaxed ? 'maxed' : BANISH_COST + ' seals'}</div>
+    </div>`;
+  const globalWithBanish = global + banishRow;
+
+  // FIX Batch 7: Ultimates (200 Seals each, design §6) live in the Arsenal tab below T2/T3 rows. Cataclysm is free.
+  const ultimates = ULTIMATES.map((u) => {
+    const owned = !!(save.ultimates && save.ultimates[u.id]);
+    return `<div class="acad-row ${owned ? 'owned' : ''}" data-kind="ultimate" data-id="${u.id}">
+      <div class="ar-name">${u.name}<span class="ar-rank">Ultimate</span></div>
+      <div class="ar-desc">${u.desc}</div>
+      <div class="ar-cost">${owned ? 'unlocked' : ULTIMATE_COST + ' seals'}</div>
+    </div>`;
+  }).join('');
   const arsenal = Object.values(ABILITIES).filter((a) => a.tier >= 2).map((a) => {
     const owned = !!save.arsenal[a.id];
     const cost = ARSENAL_COST[a.tier];
@@ -4127,11 +4654,14 @@ function academyHTML(save) {
     const maxed = rank >= CLAN_TREE.ranks;
     const cost = clanTreeCost(save, c.id);
     const legacy = save.legacy[c.id];
+    // FIX Batch 2 (clan click was confusing): one row did two jobs. Now the label says which job a click does.
+    const clanAction = !unlocked ? 'Locked' : selected ? 'Click to train' : 'Click to select';
+    const clanCost = !unlocked ? 'locked' : maxed ? (legacy ? 'legacy earned' : 'tree maxed') : selected ? `Train: tree ${rank}/${CLAN_TREE.ranks} · ${cost} seals` : `Select first — then train: tree ${rank}/${CLAN_TREE.ranks} · ${cost} seals`;
     return `<div class="acad-row clan ${unlocked ? '' : 'locked'} ${selected ? 'selected' : ''}"
         data-kind="clan" data-id="${c.id}">
-      <div class="ar-name">${c.name}<span class="ar-rank">${unlocked ? (selected ? 'selected' : 'select') : c.unlockMinutes + ' min'}</span></div>
+      <div class="ar-name">${c.name}<span class="ar-rank">${unlocked ? clanAction : c.unlockMinutes + ' min'}</span></div>
       <div class="ar-desc">${c.short} · ${c.trait}</div>
-      <div class="ar-cost">${unlocked ? (maxed ? (legacy ? 'legacy earned' : 'tree maxed') : `tree ${rank}/${CLAN_TREE.ranks} · ${cost}`) : 'locked'}</div>
+      <div class="ar-cost">${clanCost}</div>
     </div>`;
   }).join('');
 
@@ -4142,10 +4672,11 @@ function academyHTML(save) {
       <div class="tab" data-tab="arsenal">Arsenal</div>
       <div class="tab" data-tab="clans">Clans</div>
     </div>
-    <div class="acad-body" data-panel="global">${global}</div>
-    <div class="acad-body hidden" data-panel="arsenal">${arsenal}</div>
+    <div class="acad-body" data-panel="global">${globalWithBanish}</div>
+    <div class="acad-body hidden" data-panel="arsenal">${arsenal}${ultimates}</div>
     <div class="acad-body hidden" data-panel="clans">${clans}</div>
     <div class="acad-foot">
+      <div id="acadmsg" style="min-height:18px;font-size:12.5px;color:#ffb0b0;text-align:center;"></div>
       ${perfectShinobi(save) ? '<span class="perfect">Perfect Shinobi · +10% damage on every run</span>' : ''}
       <div class="btn" id="acadclose">Back</div>
     </div>
@@ -4166,14 +4697,25 @@ function bindAcademy(root, save, onBuy, onClose) {
       const id = row.dataset.id;
       let res;
       if (kind === 'global') res = buyGlobal(save, id);
+      else if (kind === 'banish') res = buyBanish(save);
       else if (kind === 'arsenal') res = buyArsenal(save, id, parseInt(row.dataset.tier, 10));
+      else if (kind === 'ultimate') res = buyUltimate(save, id);
       else if (kind === 'clan') {
         if (clanUnlocked(save, id)) {
           if (save.clan !== id) { res = selectClan(save, id); }
           else res = buyClanTree(save, id);
         } else res = { ok: false, reason: 'locked' };
       }
-      if (res && res.ok) onBuy();
+      // FIX Batch 2 (Academy silent failures): a failed buy now says WHY instead of doing nothing.
+      const msg = root.querySelector('#acadmsg');
+      if (res && res.ok) { if (msg) msg.textContent = 'Purchased!'; onBuy(); }
+      else if (msg && res) {
+        if (res.reason === 'seals') msg.textContent = `Not enough Seals — need ${res.cost} seals.`;
+        else if (res.reason === 'maxed') msg.textContent = 'Already maxed.';
+        else if (res.reason === 'locked') msg.textContent = 'Locked — survive longer to unlock.';
+        else if (res.reason === 'owned') msg.textContent = 'Already unlocked.';
+        else msg.textContent = 'Cannot buy that right now.';
+      }
     };
   });
   const close = root.querySelector('#acadclose');
@@ -4273,19 +4815,39 @@ class UI {
     if (ab && onAcademy) ab.onclick = onAcademy;
   }
 
-  showLevelUp(level, choices, onPick) {
+  // FIX Batch 5: showLevelUp now takes an optional rank (4th arg) and renders Breakthrough cards distinctly.
+  // FIX Batch 6: 4th arg can also be an opts object { rank, banishCharges, onBanish }. Old string rank still works.
+  // Banish buttons appear on ability/passive cards when banishCharges > 0. Banish costs a charge, NOT the pick.
+  showLevelUp(level, choices, onPick, rankOrOpts) {
+    const opts = typeof rankOrOpts === 'object' && rankOrOpts !== null ? rankOrOpts : { rank: rankOrOpts };
+    const rank = opts.rank;
+    const banishCharges = opts.banishCharges || 0;
+    const onBanish = opts.onBanish || null;
+    const rankLabel = rank ? ` · ${rank.charAt(0).toUpperCase() + rank.slice(1)}` : '';
+    const banishLabel = banishCharges > 0 ? ` · ${banishCharges} Banish` : '';
     const cards = choices.map((c, i) => {
+      if (c.kind === 'breakthrough') {
+        return `<div class="card breakthrough" data-i="${i}" style="border-color:#ffd27a;background:linear-gradient(180deg,rgba(255,210,122,0.16),rgba(255,122,47,0.08))">
+        <div class="k">Breakthrough · ${c.tag}</div>
+        <div class="n">${c.name}</div>
+        <div class="d">${c.desc}</div>
+        <div class="tag">RANK</div>
+      </div>`;
+      }
       const cls = c.element === 'stat' ? 'stat' : c.element;
+      const canBanish = (c.kind === 'ability' || c.kind === 'passive') && banishCharges > 0 && onBanish;
+      const kindLabel = c.kind.startsWith('postcap') ? 'Post-cap' : c.kind === 'ability' ? 'Jutsu' : 'Passive';
       return `<div class="card ${cls}" data-i="${i}">
-        <div class="k">${c.kind === 'ability' ? 'Jutsu' : 'Passive'} · ${c.tag}</div>
+        <div class="k">${kindLabel} · ${c.tag}</div>
         <div class="n">${c.name}</div>
         <div class="d">${c.desc}</div>
         <div class="tag">${c.element === 'stat' ? 'Passive' : c.element.toUpperCase()}</div>
+        ${canBanish ? `<div class="banish-btn" data-banish="${i}" style="margin-top:8px;font-size:11px;opacity:0.8;cursor:pointer;text-decoration:underline;">Banish — remove from this run</div>` : ''}
       </div>`;
     }).join('');
     this.showOverlay(`
       <div class="panel">
-        <div class="title" style="font-size:clamp(22px,4vw,36px)">Level ${level}</div>
+        <div class="title" style="font-size:clamp(22px,4vw,36px)">Level ${level}${rankLabel}${banishLabel}</div>
         <div class="sub">Choose one</div>
         <div class="cards">${cards}</div>
         <div class="hint">1 · 2 · 3 to pick</div>
@@ -4293,6 +4855,10 @@ class UI {
     const pick = (i) => { this.hideOverlay(); onPick(choices[i]); };
     this.overlay.querySelectorAll('.card').forEach((el) => {
       el.onclick = () => pick(parseInt(el.dataset.i, 10));
+    });
+    // FIX Batch 6: Banish buttons stop propagation — banishing does NOT pick the card.
+    this.overlay.querySelectorAll('[data-banish]').forEach((btn) => {
+      btn.onclick = (e) => { e.stopPropagation(); if (onBanish) onBanish(choices[parseInt(btn.dataset.banish, 10)]); };
     });
     this.currentPick = pick;
   }
@@ -4306,7 +4872,7 @@ class UI {
           <div class="d" style="font-size:13.5px;">
             He is at a quarter health and the arena is about to collapse. Walking away now keeps
             everything you earned. Staying means the fight gets harder — and losing it costs you
-            half.
+            a quarter of your Seals.
           </div>
         </div>
         <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:22px;">
@@ -4327,7 +4893,7 @@ class UI {
     this.showOverlay(`
       <div class="panel center">
         <div class="title" style="font-size:clamp(26px,5vw,46px);${win ? '' : 'background:linear-gradient(180deg,#fff,#ff5a5a);-webkit-background-clip:text;background-clip:text;'}">
-          ${win ? 'The Ronin falls' : 'You fell'}
+          ${win ? (extracted ? 'Extracted — Alive' : 'The Sovereign falls') : 'You fell'}
         </div>
         <div class="sub">${extracted ? 'Extracted with what you earned' : win ? 'Run complete' : 'The forest keeps what it takes'}</div>
         <div class="stats">
@@ -4337,7 +4903,8 @@ class UI {
           <div class="stat-box"><div class="v">${kills}</div><div class="l">Kills</div></div>
           <div class="stat-box"><div class="v">${Math.round(damage / 100) / 10}k</div><div class="l">Damage</div></div>
           <div class="stat-box"><div class="v" style="color:#ffd27a">+${sealsEarned || 0}</div><div class="l">Seals · ${sealsTotal || 0} owned</div></div>
-          ${win ? '' : `<div class="stat-box"><div class="v">${bossPct}%</div><div class="l">Ronin HP left</div></div>`}
+          ${win ? '' : `<div class="stat-box"><div class="v">${bossPct}%</div><div class="l">${['The Ronin', 'The Twin', 'The Warden', 'The Sovereign'][stage] || 'Boss'} HP left</div></div>`}
+          <!-- FIX Batch 2: run-end no longer always says "Ronin". Title is Sovereign / Extracted on win, boss name on loss follows the stage you died in. -->
         </div>
         <div class="card stat" style="max-width:640px;margin:18px auto 0;cursor:default;text-align:left;">
           <div class="k">Your build</div>
@@ -4520,6 +5087,16 @@ class Audio {
   level() { this.tone(520, 0.1, 'triangle', 0.16, 180); setTimeout(() => this.tone(720, 0.14, 'triangle', 0.14, 200), 90); }
   ultimate() { this.noiseHit(0.6, 0.35, 160, 0.6); this.tone(60, 0.6, 'sine', 0.28, -20); }
   boss() { this.tone(70, 0.9, 'sine', 0.3, 20); this.noiseHit(0.7, 0.25, 120, 0.5); }
+  // FIX Batch 4 (Batch 2 events had VFX but no sound): Warden armor, Twin swap, enrage, Ronin counter.
+  armor() { this.tone(1200, 0.08, 'square', 0.08, -400); this.noiseHit(0.06, 0.10, 2800, 2.0); }
+  swap() { this.noiseHit(0.18, 0.16, 1800, 1.8); this.tone(600, 0.16, 'sine', 0.10, 300); }
+  enrage() { this.tone(65, 0.6, 'sawtooth', 0.22, 40); this.noiseHit(0.5, 0.20, 130, 0.6); }
+  counter() { this.tone(900, 0.10, 'square', 0.12, -500); this.noiseHit(0.10, 0.14, 2200, 1.6); }
+  // FIX Batch 5: Breakthrough fanfare + Flow State shimmer.
+  breakthrough() { this.tone(520, 0.14, 'triangle', 0.16, 180); setTimeout(() => this.tone(780, 0.22, 'triangle', 0.14, 220), 120); }
+  flow() { this.noiseHit(0.30, 0.14, 3200, 2.0); this.tone(880, 0.30, 'sine', 0.10, 400); }
+  // FIX Batch 6: Banish whoosh.
+  banish() { this.noiseHit(0.22, 0.16, 1600, 1.6); this.tone(320, 0.18, 'sine', 0.08, -140); }
 }
 
 
@@ -4725,6 +5302,16 @@ world.bus.on('stage:clear', () => audio.level());
 world.bus.on('player:hurt', () => audio.hurt());
 world.bus.on('levelup', () => audio.level());
 world.bus.on('boss:spawn', () => audio.boss());
+// FIX Batch 4: Batch 2 boss events had VFX but no sound. Hook them up.
+world.bus.on('boss:armor', () => audio.armor());
+world.bus.on('boss:swap', () => audio.swap());
+world.bus.on('boss:enrage', () => audio.enrage());
+world.bus.on('counter:reflect', () => audio.counter());
+// FIX Batch 5: Breakthrough + Flow audio.
+world.bus.on('rank:breakthrough', () => audio.breakthrough());
+world.bus.on('flow:start', () => audio.flow());
+// FIX Batch 6: Banish audio.
+world.bus.on('banish', () => audio.banish());
 
 // ---------------- screens ----------------
 // dev helpers: ?warp=<seconds> skips ahead, &god=1 keeps the player alive while skipping
@@ -4784,12 +5371,17 @@ function handleState() {
   }
   if (world.state === 'levelup' && !menuOpen) {
     menuOpen = true;
+    // FIX Batch 6: Banish does NOT cost the pick — after banishing, re-show the re-rolled menu with the same pick handler.
+    const showMenu = () => ui.showLevelUp(world.player.level, world.pendingChoices, pick, {
+      rank: world.player.rank, banishCharges: world.player.banishCharges,
+      onBanish: (choice) => { if (world.banish(choice)) showMenu(); },
+    });
     const pick = (choice) => {
       world.chooseLevelUp(choice);
-      if (world.state === 'levelup') ui.showLevelUp(world.player.level, world.pendingChoices, pick);
+      if (world.state === 'levelup') showMenu();
       else menuOpen = false;
     };
-    ui.showLevelUp(world.player.level, world.pendingChoices, pick);
+    showMenu();
     return;
   }
   if (world.state === 'choice' && AUTO) { world.resumeFight(); return; }

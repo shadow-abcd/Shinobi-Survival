@@ -1,106 +1,78 @@
-# Shinobi Survival — Design Package
+# Shinobi Survival — Step 4
 
-**Version:** 1.0 (consolidated)
-**Date:** 2026-11-12
-**Status:** Handoff-ready. All decisions closed. Build can begin.
+A browser-playable build of the *Shinobi Survival* design package: a full twenty-minute run, five
+elements, twenty jutsu, ten fusions, four bosses, and a meta layer that persists between runs.
 
----
+Run it:
 
-## What this is
-
-This is the consolidated design package for *Shinobi Survival*, a roguelike action-survival game (Vampire Survivors-like) in the *ninja / elemental* theme. It merges eleven source documents and six rounds of design review into a single, implementation-ready set of specs.
-
-**The original eleven documents are superseded.** Anything not in this package is historical context, not current design.
-
----
-
-## Reading order
-
-Read these in order the first time. After that, use them as reference.
-
-| # | File | Purpose | Read time |
-|---|---|---|---|
-| 1 | **`01_DECISION_MEMO.md`** | Every binding decision. Source of truth for constraints. **Read this first.** | 15 min |
-| 2 | **`02_CONSOLIDATED_DESIGN.md`** | The game at a design level — pillars, loop, systems overview | 30 min |
-| 3 | **`03_STATUS_REGISTRY.md`** | The core data structure. Every combat rule reads from this | 10 min |
-| 4 | **`04_COMBAT_PIPELINE.md`** | The order of operations for one hit. Engineers implement this | 10 min |
-| 5 | **`05_ABILITY_STARTER_SET.md`** | 20 abilities + 3 ultimates with full stats | 20 min |
-| 6 | **`06_BOSS_SPECIFICATION.md`** | Four bosses, full kits | 20 min |
-| 7 | **`07_TECHNICAL_SPEC.md`** | Engine, tick rate, pools, sleep/wake | 15 min |
-| 8 | **`08_PROGRESSION_AND_META.md`** | Rank/Tier, clans, Seals, run-end | 20 min |
-| 9 | **`09_ROADMAP.md`** | Milestones, estimates, acceptance criteria | 10 min |
-
----
-
-## Where to look for what
-
-**"I'm implementing a new ability."**
-→ `03_STATUS_REGISTRY.md` (what statuses exist)
-→ `04_COMBAT_PIPELINE.md` (how it resolves)
-→ `05_ABILITY_STARTER_SET.md` (format template)
-
-**"I'm implementing a new enemy or boss."**
-→ `06_BOSS_SPECIFICATION.md`
-→ `02_CONSOLIDATED_DESIGN.md` § Enemy Hierarchy
-
-**"I'm architecting the code."**
-→ `07_TECHNICAL_SPEC.md`
-→ `01_DECISION_MEMO.md` (constraints)
-
-**"I'm designing a new clan or meta upgrade."**
-→ `08_PROGRESSION_AND_META.md`
-→ `01_DECISION_MEMO.md` § Decision 3 (stat floors)
-
-**"I'm deciding what to build next."**
-→ `09_ROADMAP.md`
-
-**"I want to know why a rule exists."**
-→ `01_DECISION_MEMO.md` — every decision has a rationale paragraph
-
----
-
-## Compliance protocol
-
-Every new document added to this project after today **must** open with:
-
+```bash
+cd workspace/shinobi
+python3 serve.py 8099
+# open http://127.0.0.1:8099/
 ```
 
-Memo compliance:
-§1  Overcharge          [✓ / ✗]
-§2  Rank/Tier/ability   [✓ / ✗]
-§3  Stat floors         [✓ / ✗]
-C1–C10                  [✓ / ✗ each]
-A1–A6 (addendum)        [✓ / ✗ each]
+(`serve.py` is a static server with caching disabled; `python3 -m http.server 8099` works too,
+you may just have to hard-reload after an edit.)
 
-Intentional violations: [none / list with rationale]
+Or open `dist/shinobi.html` — the whole game inlined into one file, no server needed. Rebuild it
+with `npm run bundle` after changing anything.
 
+No build step, no dependencies, no network calls. Plain ES modules + Canvas 2D.
+
+## Controls
+
+| Input | Action |
+|---|---|
+| WASD / arrows | Move |
+| Space | Dash (i-frames, 1.8 s cooldown) |
+| Q or double-click | Ultimate (needs a full Chakra meter) |
+| 1 / 2 / 3 | Pick a level-up card |
+| M | Mute |
+
+Touch: left stick moves, DASH and ULT buttons on the right. Jutsu auto-cast — the only manual
+inputs are movement, dash and the Ultimate, per the design memo §1.5.
+
+## Controls
+
+| Input | Action |
+|---|---|
+| WASD / arrows | Move |
+| Space | Dash (i-frames, 1 charge Genin / 2 charges Jonin, 1.8 s per charge) |
+| Q or double-click | Ultimate (needs a full Chakra meter) |
+| 1 / 2 / 3 | Pick a level-up card |
+| Click "Banish" under a card | Remove that card from the pool for the run (costs 1 Banish charge, NOT the pick) |
+| M | Mute |
+
+Touch: left stick moves, DASH and ULT buttons on the right. Jutsu auto-cast — the only manual
+inputs are movement, dash and the Ultimate, per the design memo §1.5.
+
+## What is implemented (Batches 1-7)
+
+- **60 Hz fixed logic tick** with an accumulator; rendering is decoupled (`src/core/world.js`).
+- **Deterministic simulation**: seeded RNG (mulberry32), same seed + same inputs = same run. Verified by `node tests/sim.mjs --check`.
+- **Object pools** for enemies (1500), projectiles, fields, gems, VFX; no per-frame allocation in the hot loop.
+- **Status registry** as data (`src/core/statuses.js`): Aerated, Burning, Drenched, Frozen, Rooted, Marked, Stunned, Staggered — with durations, stack caps, refresh rules, detonation multipliers, per-target-per-pair ICDs and the D1-D4 loop guards.
+- **Prime/Detonate**: Wind applies Aerated (4 s), Fire detonates it for 3× and spreads Aerated to two neighbours (2.5 s ICD per target per pair, one hop, capped).
+- **Fusion**: all ten pairs from the matrix, each with its own 2.5 s per-target ICD. Fire + Wind = Firestorm, fired by the detonation itself (memo C9).
+- **Chakra / Overcharge**: +1 per kill (+10 elite, +50 boss), cap 100. At 100 the Ultimate is armed and the next standard jutsu fires empowered (+50% damage, +30% radius, +1 stack).
+- **Abilities**: all twenty from the Ability Starter Set across Fire, Wind, Lightning, Water and Earth — four per element, Tier 1/2/3, with the targeting mode, status and damage curve the document specifies. Four active slots, six passive slots (Genin 5, Chunin+ 6), five ranks per ability. Tier 2 needs rank 3 of its parent, Tier 3 needs rank 5 (ability mastery only, never player Rank).
+- **Three ultimates**: Cataclysm Core (free, all statuses, every pair detonated), Susanoo Ribs (200 Seals), Summoning: Toad Sage (200 Seals).
+- **Enemies** on the time-based curve: `HP = 20 × 1.085^minutes`, `SpawnRate = min(12, 1.5 + 0.9 × minutes)`, `MaxOnScreen = min(900, 120 + 40 × minutes)`. Fodder, brutes and archers (archers keep preferred distance and circle — the anti-AoE behaviour, not wave compression).
+- **Four bosses** on a twenty-minute cadence, each in its own cleared arena, each with a punish window: Ronin (5:00, Counter Stance reflects), Twin (10:00, swap + absorb), Warden (15:00, armored front, 3 phases), Sovereign (20:00, Extract or Finish choice).
+- **Rank / Breakthrough (Batch 5)**: Genin → Chunin (level 5+, +1 passive slot) → Jonin (level 15+, +1 dash charge) → Kage (level 25+, Flow State: 5 s of 70% CDR on Ultimate, once per run). Breakthrough is a level-up menu option that costs the pick. Skip it and it stays available next level-up. No stat boosts — Rank grants unlocks, not boosts.
+- **Banish + Post-cap (Batch 6)**: Banish removes one offered card from the pool for the run. 1 free per run + up to 2 bought in Academy (50 Seals each), max 3 per run. At level cap 50, each full XP bar gives Heal 25% / Reroll Jutsu / +1 Banish instead of normal picks.
+- **Academy (Batch 7, design §6)**: Training costs are flat — HP +10/node (max 10, 30 Seals), Chakra +5%/node (max 10, 40), Move +2%/node (max 10, 40). Clan trees are 5 nodes, 100 Seals each. T2 50, T3 150, Ultimates 200. Save writes backup-first so a crash-mid-write can be recovered on load.
+- **Clan weighting (Batch 4)**: level-up rolls weight the clan-signature element 2× (Uchiha Fire, Nara Earth, Hyuga Wind, Uzumaki Water).
+- **XP curve (Batch 4)**: `XP to level N = 15 × 1.12^(N-1)`, cap 50.
+
+## Install order (Batches 1-7)
+
+Install in order 1 → 2 → 3 → 4 → 5 → 6 → 7. Each batch is full files, built on the previous one. Replace the whole file, don't paste snippets. If you skip earlier batches, the latest batch's `world.js` / `upgrades.js` still contain Batch 1-6 fixes, but don't mix old files with new ones.
+
+## Tests
+
+```bash
+node tests/combat.test.mjs   # 21 checks: statuses, prime/detonate, ICD, spread, fusion, damage, overcharge, chakra
+node tests/sim.mjs --check    # 5 seeds + determinism + post-cap, fails on NaN / crash
+node tools/bundle.mjs .       # 18 modules -> dist/shinobi.html, fails on missing modules / placeholders
 ```
-
-Two minutes. It prevents the drift that cost six review cycles.
-
----
-
-## Version history
-
-| Version | Date | Changes |
-|---|---|---|
-| 1.0 | 2026-11-12 | Initial consolidated package. All eleven source docs merged. Decision memo + addendum integrated. Boss specification written. |
-
----
-
-## What's still open (not closed by this package)
-
-- **IP / terminology rename — OPEN.** This package still uses *Naruto*-derived terms (Uchiha, Nara, Hyuga, Uzumaki, Chakra, Jutsu, Genin/Chunin/Jonin/Kage, Susanoo, etc.) flagged in the first review. No rename has been applied. Do not ship commercially under these terms without a rename pass or licence. See AUDIT below.
-- Everything else on the old "still open" list is resolved in this package:
-
-- Boss specification → `06_BOSS_SPECIFICATION.md`
-- Slot counts → 4 active / 6 passive / 1 ultimate (in `08_PROGRESSION_AND_META.md`)
-- Run-end screen → `08_PROGRESSION_AND_META.md` § Run-End Screen
-- Post-max challenge → Ascension tiers (`08_PROGRESSION_AND_META.md` § Endgame)
-- Run length → 20-minute finale + Ascension (`08_PROGRESSION_AND_META.md`)
-- XP curve → `08_PROGRESSION_AND_META.md` § XP Curve
-- Boss HP table → `06_BOSS_SPECIFICATION.md` § HP Formula
-- Targeting mode per ability → `05_ABILITY_STARTER_SET.md`
-- Modifier-stack order → `07_TECHNICAL_SPEC.md` §9 Modifier Stack (not 08 — 08 has no Modifier Stack section)
-
-v1.1 will be reserved for tuning values after playtesting, not for missing systems.

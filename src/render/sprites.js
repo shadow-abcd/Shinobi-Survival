@@ -335,11 +335,50 @@ function waterCloneSprite(r) {
   return c;
 }
 
+function teleporterSprite(r) {
+  // Shunshin: purple cloak + blink ring, so it never looks like fodder.
+  const { c, g } = makeCanvas((r + 12) * 2, (r + 12) * 2);
+  const cx = r + 12, cy = r + 12;
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  g.beginPath(); g.ellipse(cx, cy + r * 0.6, r * 0.92, r * 0.4, 0, 0, Math.PI * 2); g.fill();
+  const grd = g.createRadialGradient(cx - r * 0.3, cy - r * 0.4, r * 0.2, cx, cy, r);
+  grd.addColorStop(0, '#7a5fd8'); grd.addColorStop(0.7, '#4b3a7a'); grd.addColorStop(1, '#241a4a');
+  g.fillStyle = grd; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(183,155,255,0.95)'; g.lineWidth = 2;
+  g.beginPath(); g.arc(cx, cy, r + 5, 0, Math.PI * 2); g.stroke();
+  g.fillStyle = '#e6dcff';
+  g.beginPath(); g.arc(cx - r * 0.22, cy, 2, 0, Math.PI * 2); g.fill();
+  g.beginPath(); g.arc(cx + r * 0.22, cy, 2, 0, Math.PI * 2); g.fill();
+  return c;
+}
+function siphonerSprite(r) {
+  // Siphoner: teal cloak + drain tendrils.
+  const { c, g } = makeCanvas((r + 12) * 2, (r + 12) * 2);
+  const cx = r + 12, cy = r + 12;
+  g.fillStyle = 'rgba(0,0,0,0.35)';
+  g.beginPath(); g.ellipse(cx, cy + r * 0.6, r * 0.92, r * 0.4, 0, 0, Math.PI * 2); g.fill();
+  const grd = g.createRadialGradient(cx - r * 0.3, cy - r * 0.4, r * 0.2, cx, cy, r);
+  grd.addColorStop(0, '#3a9a8a'); grd.addColorStop(0.7, '#1f4a44'); grd.addColorStop(1, '#0a241f');
+  g.fillStyle = grd; g.beginPath(); g.arc(cx, cy, r, 0, Math.PI * 2); g.fill();
+  g.strokeStyle = 'rgba(95,232,200,0.9)'; g.lineWidth = 1.6;
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + 0.4;
+    g.beginPath(); g.moveTo(cx + Math.cos(a) * r * 0.5, cy + Math.sin(a) * r * 0.5);
+    g.lineTo(cx + Math.cos(a) * (r + 6), cy + Math.sin(a) * (r + 6)); g.stroke();
+  }
+  g.fillStyle = '#c8fff0';
+  g.beginPath(); g.arc(cx, cy, 2.2, 0, Math.PI * 2); g.fill();
+  return c;
+}
+
 export function buildSprites() {
   const S = {};
   S.fodder = enemySprite('fodder', '#a8455f', '#ff7f9b', 13);
   S.brute = enemySprite('brute', '#6f2f4a', '#ff9a7f', 21);
   S.archer = enemySprite('archer', '#3d5a7a', '#7fc4ff', 12);
+  // FIX Batch 1: elites had no sprite and rendered as fodder.
+  S.teleporter = teleporterSprite(15);
+  S.siphoner = siphonerSprite(14);
   S.player = playerSprite(13);
   S.toad = toadSprite(30);
   S.golem = golemSprite(20);
