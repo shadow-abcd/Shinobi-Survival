@@ -92,15 +92,9 @@ export class UI {
   }
 
   // FIX Batch 5: showLevelUp now takes an optional rank (4th arg) and renders Breakthrough cards distinctly.
-  // FIX Batch 6: 4th arg can also be an opts object { rank, banishCharges, onBanish }. Old string rank still works.
-  // Banish buttons appear on ability/passive cards when banishCharges > 0. Banish costs a charge, NOT the pick.
-  showLevelUp(level, choices, onPick, rankOrOpts) {
-    const opts = typeof rankOrOpts === 'object' && rankOrOpts !== null ? rankOrOpts : { rank: rankOrOpts };
-    const rank = opts.rank;
-    const banishCharges = opts.banishCharges || 0;
-    const onBanish = opts.onBanish || null;
+  // Old signature showLevelUp(level, choices, onPick) still works — rank is optional.
+  showLevelUp(level, choices, onPick, rank) {
     const rankLabel = rank ? ` · ${rank.charAt(0).toUpperCase() + rank.slice(1)}` : '';
-    const banishLabel = banishCharges > 0 ? ` · ${banishCharges} Banish` : '';
     const cards = choices.map((c, i) => {
       if (c.kind === 'breakthrough') {
         return `<div class="card breakthrough" data-i="${i}" style="border-color:#ffd27a;background:linear-gradient(180deg,rgba(255,210,122,0.16),rgba(255,122,47,0.08))">
@@ -111,19 +105,16 @@ export class UI {
       </div>`;
       }
       const cls = c.element === 'stat' ? 'stat' : c.element;
-      const canBanish = (c.kind === 'ability' || c.kind === 'passive') && banishCharges > 0 && onBanish;
-      const kindLabel = c.kind.startsWith('postcap') ? 'Post-cap' : c.kind === 'ability' ? 'Jutsu' : 'Passive';
       return `<div class="card ${cls}" data-i="${i}">
-        <div class="k">${kindLabel} · ${c.tag}</div>
+        <div class="k">${c.kind === 'ability' ? 'Jutsu' : 'Passive'} · ${c.tag}</div>
         <div class="n">${c.name}</div>
         <div class="d">${c.desc}</div>
         <div class="tag">${c.element === 'stat' ? 'Passive' : c.element.toUpperCase()}</div>
-        ${canBanish ? `<div class="banish-btn" data-banish="${i}" style="margin-top:8px;font-size:11px;opacity:0.8;cursor:pointer;text-decoration:underline;">Banish — remove from this run</div>` : ''}
       </div>`;
     }).join('');
     this.showOverlay(`
       <div class="panel">
-        <div class="title" style="font-size:clamp(22px,4vw,36px)">Level ${level}${rankLabel}${banishLabel}</div>
+        <div class="title" style="font-size:clamp(22px,4vw,36px)">Level ${level}${rankLabel}</div>
         <div class="sub">Choose one</div>
         <div class="cards">${cards}</div>
         <div class="hint">1 · 2 · 3 to pick</div>
@@ -131,10 +122,6 @@ export class UI {
     const pick = (i) => { this.hideOverlay(); onPick(choices[i]); };
     this.overlay.querySelectorAll('.card').forEach((el) => {
       el.onclick = () => pick(parseInt(el.dataset.i, 10));
-    });
-    // FIX Batch 6: Banish buttons stop propagation — banishing does NOT pick the card.
-    this.overlay.querySelectorAll('[data-banish]').forEach((btn) => {
-      btn.onclick = (e) => { e.stopPropagation(); if (onBanish) onBanish(choices[parseInt(btn.dataset.banish, 10)]); };
     });
     this.currentPick = pick;
   }

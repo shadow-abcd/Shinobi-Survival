@@ -91,6 +91,4 @@ export class Audio {
   // FIX Batch 5: Breakthrough fanfare + Flow State shimmer.
   breakthrough() { this.tone(520, 0.14, 'triangle', 0.16, 180); setTimeout(() => this.tone(780, 0.22, 'triangle', 0.14, 220), 120); }
   flow() { this.noiseHit(0.30, 0.14, 3200, 2.0); this.tone(880, 0.30, 'sine', 0.10, 400); }
-  // FIX Batch 6: Banish whoosh.
-  banish() { this.noiseHit(0.22, 0.16, 1600, 1.6); this.tone(320, 0.18, 'sine', 0.08, -140); }
 }
