@@ -61,7 +61,8 @@ export class World {
       x: 0, y: 0, vx: 0, vy: 0, r: 13,
       hp: 150, maxHp: 150, speedMult: 1, dmgMult: 1, cdr: 0, crit: 0.05, magnetMult: 1,
       atk: 10, facing: { x: 1, y: 0 },
-      level: 1, xp: 0, xpNeed: 18, chakra: 0, overcharge: false,
+      // FIX Batch 4 (XP curve): design is XP to level N = 15 * 1.12^(N-1). Was 18 * 1.13^(N-1) — ~2x too slow at level 40.
+      level: 1, xp: 0, xpNeed: 15, chakra: 0, overcharge: false,
       dashCd: 0, dashT: 0, iframe: 0, dashDir: { x: 1, y: 0 },
       hitFlash: 0, invulnFlash: 0, moving: false, kills: 0, regenT: 0,
     };
@@ -934,7 +935,7 @@ export class World {
       p.level++;
       p.maxHp += 2;                                     // a shinobi grows into the run
       p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.08 + 2);
-      p.xpNeed = Math.round(18 * Math.pow(1.13, p.level - 1));
+      p.xpNeed = Math.round(15 * Math.pow(1.12, p.level - 1));
       this.pendingLevels++;
       leveled = true;
     }
