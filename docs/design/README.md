@@ -90,7 +90,7 @@ Two minutes. It prevents the drift that cost six review cycles.
 
 ## What's still open (not closed by this package)
 
-- **IP / terminology rename — OPEN.** This package still uses *Naruto*-derived terms (Uchiha, Nara, Hyuga, Uzumaki, Chakra, Jutsu, Genin/Chunin/Jonin/Kage, Susanoo, etc.) flagged in the first review. No rename has been applied. Do not ship commercially under these terms without a rename pass or licence. See AUDIT below.
+- **IP / terminology rename — OPEN.** This package still uses *Naruto*-derived terms (Ember, Stoneward, Gale, Tide, Chakra, Jutsu, Genin/Chunin/Jonin/Kage, Spectral, etc.) flagged in the first review. No rename has been applied. Do not ship commercially under these terms without a rename pass or licence. See AUDIT below.
 - Everything else on the old "still open" list is resolved in this package:
 
 - Boss specification → `06_BOSS_SPECIFICATION.md`
@@ -104,3 +104,6 @@ Two minutes. It prevents the drift that cost six review cycles.
 - Modifier-stack order → `07_TECHNICAL_SPEC.md` §9 Modifier Stack (not 08 — 08 has no Modifier Stack section)
 
 v1.1 will be reserved for tuning values after playtesting, not for missing systems.
+
+
+> **IP rename — MINIMAL DONE 2026-11-13:** Clan names, Spectral Guard, Elder Toad renamed. Chakra/Jutsu/Genin/Chunin/Jonin/Kage kept intentionally.

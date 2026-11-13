@@ -71,7 +71,7 @@ export class UI {
         </div>
         <div class="metastrip">
           <span>${save ? save.seals : 0} seals</span>
-          <span>${save ? (CLANS[save.clan] || CLANS.uchiha).name : 'Uchiha'}</span>
+          <span>${save ? (CLANS[save.clan] || CLANS.ember).name : 'Ember'}</span>
           <span>Ascension ${save ? save.ascension : 0}</span>
           <div class="btn ghost" id="acadbtn">Academy</div>
         </div>

@@ -56,13 +56,13 @@ inputs are movement, dash and the Ultimate, per the design memo §1.5.
 - **Fusion**: all ten pairs from the matrix, each with its own 2.5 s per-target ICD. Fire + Wind = Firestorm, fired by the detonation itself (memo C9).
 - **Chakra / Overcharge**: +1 per kill (+10 elite, +50 boss), cap 100. At 100 the Ultimate is armed and the next standard jutsu fires empowered (+50% damage, +30% radius, +1 stack).
 - **Abilities**: all twenty from the Ability Starter Set across Fire, Wind, Lightning, Water and Earth — four per element, Tier 1/2/3, with the targeting mode, status and damage curve the document specifies. Four active slots, six passive slots (Genin 5, Chunin+ 6), five ranks per ability. Tier 2 needs rank 3 of its parent, Tier 3 needs rank 5 (ability mastery only, never player Rank).
-- **Three ultimates**: Cataclysm Core (free, all statuses, every pair detonated), Susanoo Ribs (200 Seals), Summoning: Toad Sage (200 Seals).
+- **Three ultimates**: Cataclysm Core (free, all statuses, every pair detonated), Spectral Guard (200 Seals), Summoning: Elder Toad (200 Seals).
 - **Enemies** on the time-based curve: `HP = 20 × 1.085^minutes`, `SpawnRate = min(12, 1.5 + 0.9 × minutes)`, `MaxOnScreen = min(900, 120 + 40 × minutes)`. Fodder, brutes and archers (archers keep preferred distance and circle — the anti-AoE behaviour, not wave compression).
 - **Four bosses** on a twenty-minute cadence, each in its own cleared arena, each with a punish window: Ronin (5:00, Counter Stance reflects), Twin (10:00, swap + absorb), Warden (15:00, armored front, 3 phases), Sovereign (20:00, Extract or Finish choice).
 - **Rank / Breakthrough (Batch 5)**: Genin → Chunin (level 5+, +1 passive slot) → Jonin (level 15+, +1 dash charge) → Kage (level 25+, Flow State: 5 s of 70% CDR on Ultimate, once per run). Breakthrough is a level-up menu option that costs the pick. Skip it and it stays available next level-up. No stat boosts — Rank grants unlocks, not boosts.
 - **Banish + Post-cap (Batch 6)**: Banish removes one offered card from the pool for the run. 1 free per run + up to 2 bought in Academy (50 Seals each), max 3 per run. At level cap 50, each full XP bar gives Heal 25% / Reroll Jutsu / +1 Banish instead of normal picks.
 - **Academy (Batch 7, design §6)**: Training costs are flat — HP +10/node (max 10, 30 Seals), Chakra +5%/node (max 10, 40), Move +2%/node (max 10, 40). Clan trees are 5 nodes, 100 Seals each. T2 50, T3 150, Ultimates 200. Save writes backup-first so a crash-mid-write can be recovered on load.
-- **Clan weighting (Batch 4)**: level-up rolls weight the clan-signature element 2× (Uchiha Fire, Nara Earth, Hyuga Wind, Uzumaki Water).
+- **Clan weighting (Batch 4)**: level-up rolls weight the clan-signature element 2× (Ember Fire, Stoneward Earth, Gale Wind, Tide Water).
 - **XP curve (Batch 4)**: `XP to level N = 15 × 1.12^(N-1)`, cap 50.
 
 ## Install order (Batches 1-7)

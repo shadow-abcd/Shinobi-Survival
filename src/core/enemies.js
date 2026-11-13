@@ -114,12 +114,12 @@ export function updateEnemy(world, e, dt) {
     }
   }
 
-  // Nara: shadow zone slows and marks for extra damage
-  if (world.naraSlow && dist < 260) {
-    e.naraMarked = true;
-    speed *= 0.7 - Math.min(0.2, world.naraSlow);
+  // Stoneward: stone zone slows and marks for extra damage
+  if (world.stonewardSlow && dist < 260) {
+    e.stonewardMarked = true;
+    speed *= 0.7 - Math.min(0.2, world.stonewardSlow);
   } else {
-    e.naraMarked = false;
+    e.stonewardMarked = false;
   }
 
   // contact damage

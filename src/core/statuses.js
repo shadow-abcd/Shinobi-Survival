@@ -107,7 +107,7 @@ function tickOne(world, e, dt) {
       if (s.tick <= 0) {
         s.tick += def.dotInterval;
         // FIX Batch 3 (Burn DoT): crit:false explicitly — Burn is FLAT (design: "Burn stacks add FLAT after multipliers").
-        // world.js also skips all multipliers for dot:true, so this stays flat even if target is Staggered / Nara-marked.
+        // world.js also skips all multipliers for dot:true, so this stays flat even if target is Staggered / Stoneward-marked.
         world.damageEnemy(e, def.dotPerStack * s.stacks, {
           element: 'fire', dot: true, silent: false, source: 'burning', crit: false,
         });

@@ -89,11 +89,11 @@ export class World {
     this.noSafeZone = m.noSafeZone;
     this.clan = m.clan;
     this.clanRegen = m.regen || 0;
-    this.naraSlow = m.slow || 0;
+    this.stonewardSlow = m.slow || 0;
     this.abilities = [{ id: 'fireball', rank: 1, cd: 0, cdMax: ABILITIES.fireball.cd }];
     this.passives = [];
     this.ultimate = this.ultimate || 'cataclysm';
-    this.buffs = { susanoo: 0, lightningArmor: 0 };
+    this.buffs = { spectral: 0, lightningArmor: 0 };
     this._thornsCd = 0;
     this.input = { x: 0, y: 0, dash: false, ult: false };
 
@@ -168,7 +168,7 @@ export class World {
   }
 
   calcDamage(coeff, rank) {
-    const sus = this.buffs && this.buffs.susanoo > 0 ? 1.5 : 1;
+    const sus = this.buffs && this.buffs.spectral > 0 ? 1.5 : 1;
     return coeff * RANK_MULT[rank] * this.player.atk * this.player.dmgMult * (this._empowerDmg || 1) * sus;
   }
 
@@ -374,22 +374,22 @@ export class World {
     let crit = false;
     if (opts.crit !== undefined) crit = opts.crit;
     else if (!opts.dot) {
-      const fireBonus = this.clan === 'uchiha' && opts.element === 'fire' ? 0.10 : 0;
+      const fireBonus = this.clan === 'ember' && opts.element === 'fire' ? 0.10 : 0;
       if (this.rng.chance(p.crit + fireBonus)) crit = true;
     }
 
     // clan traits (memo §3 — mechanical, never raw percentage stats)
     if (!opts.dot) {
-      if (this.clan === 'uchiha' && this.rng.chance(0.15)) applyStatus(this, e, 'stunned', { stacks: 1, source: 'clan' });
-      if (this.clan === 'hyuga') {
+      if (this.clan === 'ember' && this.rng.chance(0.15)) applyStatus(this, e, 'stunned', { stacks: 1, source: 'clan' });
+      if (this.clan === 'gale') {
         const dx = e.x - p.x, dy = e.y - p.y;
         const d = Math.hypot(dx, dy) || 1;
         e.x += (dx / d) * 26; e.y += (dy / d) * 26;
         applyStatus(this, e, 'staggered', { stacks: 1, source: 'clan' });
       }
     }
-    // FIX Batch 3 (Burn DoT is FLAT): Nara + Staggered multipliers do NOT apply to DoT. Design: Burn stacks add FLAT after multipliers.
-    if (!opts.dot && this.naraSlow && e.naraMarked) dmg *= 1.10;
+    // FIX Batch 3 (Burn DoT is FLAT): Stoneward + Staggered multipliers do NOT apply to DoT. Design: Burn stacks add FLAT after multipliers.
+    if (!opts.dot && this.stonewardSlow && e.stonewardMarked) dmg *= 1.10;
 
     // step 7 — damage calculation
     if (!opts.dot) dmg *= statusDamageTakenMult(e);
@@ -514,11 +514,11 @@ export class World {
     this.player.kills++;
     this.kills++;
     this.addChakra(isElite ? 10 : 1);
-    // FIX Batch 1 (bug: Uzumaki heal always true):
+    // FIX Batch 1 (bug: Tide heal always true):
     // Old code checked e.hp < 30% AFTER death (e.hp <= 0, always true).
     // Now check hp BEFORE the killing blow, passed in as opts.hpBefore.
     const hpBeforeKill = opts.hpBefore !== undefined ? opts.hpBefore : e.hp;
-    if (this.clan === 'uzumaki' && hpBeforeKill < e.maxHp * 0.3) {
+    if (this.clan === 'tide' && hpBeforeKill < e.maxHp * 0.3) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 2);
     }
     // FIX Batch 1 (bug: Marked onDeathChain never fired):
@@ -639,7 +639,7 @@ export class World {
     const p = this.player;
     if (this.state !== 'playing') return;
     if (p.iframe > 0) return;
-    if (this.buffs.susanoo > 0) amount *= 0.1;
+    if (this.buffs.spectral > 0) amount *= 0.1;
     if (this.buffs.lightningArmor > 0 && this._thornsCd <= 0) {
       this._thornsCd = 0.4;
       const list = this.enemies.active;
@@ -671,7 +671,7 @@ export class World {
     const armed = p.overcharge;
     this._empowerDmg = armed ? 1.5 : 1;
     this._empowerRadius = armed ? 1.3 : 1;
-    this._empowerStacks = armed ? (this.clan === 'uzumaki' ? 2 : 1) : 0;
+    this._empowerStacks = armed ? (this.clan === 'tide' ? 2 : 1) : 0;
     if (armed) p.overcharge = false;
     let ok = false;
     try { ok = this.castJutsu(ab); } catch (err) { ok = false; }
@@ -919,7 +919,7 @@ export class World {
       this.bus.emit('flow:start', { t: 5.0 });
       this.recalc();
     }
-    if (id === 'susanoo') this.addBuff('susanoo', 5.0);
+    if (id === 'spectral') this.addBuff('spectral', 5.0);
     else if (id === 'toad') this.summonToad();
     else this.castCataclysm();
     this.shake = Math.min(16, this.shake + 9);
@@ -1053,8 +1053,8 @@ export class World {
     // Out-of-combat recovery: 4 s clean, then a slow trickle. Rewards clean kiting.
     p.regenT = p.hitFlash > 0 ? 0 : p.regenT + dt;
     if (p.regenT > 4 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 1.1 * dt);
-    // FIX Batch 2 (Uzumaki regen was dead): clanRegen was computed in meta.js but never used.
-    // Uzumaki clan tree regen (0.25 / rank, up to 1.0 HP/s) now actually heals, always.
+    // FIX Batch 2 (Tide regen was dead): clanRegen was computed in meta.js but never used.
+    // Tide clan tree regen (0.25 / rank, up to 1.0 HP/s) now actually heals, always.
     if (this.clanRegen > 0 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + this.clanRegen * dt);
     // Dash recharge + Flow timer. Flow expiry calls recalc so CDR drops back to base.
     if (p.dashCharges < p.dashMax) {

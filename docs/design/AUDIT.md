@@ -31,7 +31,7 @@ Supersedes: the hyphen-named `05-ability-starter-set.md` / `08-progression-meta.
 
 ## 3. Still open — not fixed by this push
 
-- **IP / terminology rename — OPEN, do not ship on this.** The package still uses Naruto-derived terms (Uchiha, Nara, Hyuga, Uzumaki, Chakra, Jutsu, Genin/Chunin/Jonin/Kage, Susanoo, Genjutsu, etc.) flagged in the very first review (read.md §1). No rename has been applied in any of 01–09. The mechanics survive a rename; the nouns do not. Do a rename pass (or get a licence) before any commercial release / Steam page / store art. Do not let these names leak into new code identifiers, UI strings, or marketing.
+- **IP / terminology rename — MINIMAL DONE 2026-11-13. Clan names, Spectral Guard, Elder Toad renamed. Chakra/Jutsu/Genin/Chunin/Jonin/Kage kept intentionally.** The package still uses Naruto-derived terms (Uchiha, Nara, Hyuga, Uzumaki, Chakra, Jutsu, Genin/Chunin/Jonin/Kage, Susanoo, Genjutsu, etc.) flagged in the very first review (read.md §1). No rename has been applied in any of 01–09. The mechanics survive a rename; the nouns do not. Do a rename pass (or get a licence) before any commercial release / Steam page / store art. Do not let these names leak into new code identifiers, UI strings, or marketing.
 - **01 omits Breakthrough level thresholds.** 01 says Breakthrough is a menu option (correct) but gives no levels. 08 is authoritative: Chunin 5+, Jonin 15+, Kage 25+. No change made — 01 is the constraint doc, 08 is the numbers doc — but if you ever edit 01, add the three numbers there too so a reader of 01 alone does not have to hunt.
 
 ## 4. What the Read files are

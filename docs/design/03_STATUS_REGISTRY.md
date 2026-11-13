@@ -17,7 +17,7 @@
 | **Rooted** | Earth hits | 2.5 s | 1 | Immune 3 s after break | **Wind** → launch, 2.0× + knockback | 2.0× | 2.5 s |
 | **Marked** | Earth+Lightning fusion (Detonation Clay) | 3.0 s | 1 | No refresh | On death → chain explosion to 2 nearby, 2.0× | 2.0× | 2.0 s |
 | **Stunned** | Lightning detonates Drenched (see 04 § Step 6) | 1.0 s | 1 | Immune 2 s after break | — | — | — |
-| **Staggered** | Hyuga knockback (clan) | 2.0 s | 1 | Refresh duration | — | +20% incoming damage | — |
+| **Staggered** | Gale knockback (clan) | 2.0 s | 1 | Refresh duration | — | +20% incoming damage | — |
 
 ---
 

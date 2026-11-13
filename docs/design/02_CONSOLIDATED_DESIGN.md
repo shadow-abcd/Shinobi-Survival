@@ -198,8 +198,8 @@ PodSize(t)     = 3 + min(7, floor(minutes / 4))
 Genin → Chunin → Jonin → Kage. Granted by **Breakthrough** — a menu option costing a level-up pick.
 
 **Rank effects:**
-- **Genin:** Base stats. No additional grants.
-- **Chunin:** +1 passive slot unlocked (5 of 6 usable).
+- **Genin:** Base stats. 5 of 6 passive slots usable.
+- **Chunin:** +1 passive slot unlocked (6 of 6 usable).
 - **Jonin:** +1 dash charge.
 - **Kage:** Unlocks Flow State — 5 s of 70% CDR, triggered by Ultimate, once per run.
 
@@ -229,10 +229,10 @@ Level cap: 50. After cap, level-up menu offers heal/reroll/banish instead.
 
 Four clans, defined by stat floors + mechanical traits. See Memo §3 for the table.
 
-**Uchiha** (start): Glass cannon. Fast, fragile, crit/stun.
-**Nara** (30 min): Zoning. Slow, resource-rich, control.
-**Hyuga** (90 min): Frontliner. Tanky, resource-poor, spacing (with Stagger damage amp).
-**Uzumaki** (180 min): Sustain. Big pools, slowest.
+**Ember** (start): Glass cannon. Fast, fragile, crit/stun.
+**Stoneward** (30 min): Zoning. Slow, resource-rich, control.
+**Gale** (90 min): Frontliner. Tanky, resource-poor, spacing (with Stagger damage amp).
+**Tide** (180 min): Sustain. Big pools, slowest.
 
 Clans unlock at survive-time milestones. Persists across runs.
 
@@ -261,7 +261,8 @@ The meta tree's ceiling is **not** the game's ceiling.
 - A2: +10% enemy count
 - A3: Bosses +1 phase
 - A4: No safe zones
-- A5+: Combined escalations
+- A5: Player HP −10%
+- A6+: Combinations + +5% per tier
 
 Runs at Ascension 5+ are the long-term challenge. Ascension has no ceiling — the modifiers compound.
 

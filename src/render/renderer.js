@@ -552,7 +552,7 @@ export class Renderer {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 11, 17, 7, 0, 0, Math.PI * 2); ctx.stroke();
     // buff auras
-    if (this.world.buffs.susanoo > 0) {
+    if (this.world.buffs.spectral > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.35 + Math.sin(this.world.t * 6) * 0.12;
       ctx.strokeStyle = '#c9a8ff';

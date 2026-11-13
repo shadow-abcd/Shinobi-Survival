@@ -81,9 +81,9 @@ export function rollChoices(world, n = 3) {
   if ((world.player?.level || 1) >= 50) return rollPostCapChoices(world);
   const pool = [];
   // FIX Batch 4 (clan weighting): design p19 — clan-signature elements get 2x weight in the level-up roll.
-  // Uchiha=Fire, Nara=Earth, Hyuga=Wind, Uzumaki=Water. Lightning has no clan signature — available evenly.
+  // Ember=Fire, Stoneward=Earth, Gale=Wind, Tide=Water. Lightning has no clan signature — available evenly.
   // Old code had no clan weighting at all, and a redundant * (owned ? 1 : 1) factor.
-  const CLAN_SIGNATURE = { uchiha: 'fire', nara: 'earth', hyuga: 'wind', uzumaki: 'water' };
+  const CLAN_SIGNATURE = { ember: 'fire', stoneward: 'earth', gale: 'wind', tide: 'water' };
   const signature = CLAN_SIGNATURE[world.clan] || null;
   for (const id in ABILITIES) {
     const def = ABILITIES[id];

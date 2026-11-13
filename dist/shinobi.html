@@ -190,7 +190,7 @@ canvas#game{display:block;width:100%;height:100%;background:#06050b;}
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-13T07:06:39.944Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-13T12:27:50.301Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -545,13 +545,13 @@ const ULTIMATES = {
     desc: 'A core of raw chakra in the densest cluster: 20× ATK in 400 px, every status at max stacks, every pair detonated.',
     cast(world) { world.castCataclysm(); },
   },
-  susanoo: {
-    id: 'susanoo', name: 'Susanoo Ribs', tag: 'Defensive',
+  spectral: {
+    id: 'spectral', name: 'Spectral Guard', tag: 'Defensive',
     desc: 'Five seconds of 90% damage reduction, status immunity and +50% damage.',
-    cast(world) { world.addBuff('susanoo', 5.0); },
+    cast(world) { world.addBuff('spectral', 5.0); },
   },
   toad: {
-    id: 'toad', name: 'Summoning: Toad Sage', tag: 'Utility',
+    id: 'toad', name: 'Summoning: Elder Toad', tag: 'Utility',
     desc: 'A giant toad fights beside you for ten seconds, taunting and burning what it hits.',
     cast(world) { world.summonToad(); },
   },
@@ -665,7 +665,7 @@ function tickOne(world, e, dt) {
       if (s.tick <= 0) {
         s.tick += def.dotInterval;
         // FIX Batch 3 (Burn DoT): crit:false explicitly — Burn is FLAT (design: "Burn stacks add FLAT after multipliers").
-        // world.js also skips all multipliers for dot:true, so this stays flat even if target is Staggered / Nara-marked.
+        // world.js also skips all multipliers for dot:true, so this stays flat even if target is Staggered / Stoneward-marked.
         world.damageEnemy(e, def.dotPerStack * s.stacks, {
           element: 'fire', dot: true, silent: false, source: 'burning', crit: false,
         });
@@ -826,12 +826,12 @@ function updateEnemy(world, e, dt) {
     }
   }
 
-  // Nara: shadow zone slows and marks for extra damage
-  if (world.naraSlow && dist < 260) {
-    e.naraMarked = true;
-    speed *= 0.7 - Math.min(0.2, world.naraSlow);
+  // Stoneward: stone zone slows and marks for extra damage
+  if (world.stonewardSlow && dist < 260) {
+    e.stonewardMarked = true;
+    speed *= 0.7 - Math.min(0.2, world.stonewardSlow);
   } else {
-    e.naraMarked = false;
+    e.stonewardMarked = false;
   }
 
   // contact damage
@@ -1387,9 +1387,9 @@ function rollChoices(world, n = 3) {
   if ((world.player?.level || 1) >= 50) return rollPostCapChoices(world);
   const pool = [];
   // FIX Batch 4 (clan weighting): design p19 — clan-signature elements get 2x weight in the level-up roll.
-  // Uchiha=Fire, Nara=Earth, Hyuga=Wind, Uzumaki=Water. Lightning has no clan signature — available evenly.
+  // Ember=Fire, Stoneward=Earth, Gale=Wind, Tide=Water. Lightning has no clan signature — available evenly.
   // Old code had no clan weighting at all, and a redundant * (owned ? 1 : 1) factor.
-  const CLAN_SIGNATURE = { uchiha: 'fire', nara: 'earth', hyuga: 'wind', uzumaki: 'water' };
+  const CLAN_SIGNATURE = { ember: 'fire', stoneward: 'earth', gale: 'wind', tide: 'water' };
   const signature = CLAN_SIGNATURE[world.clan] || null;
   for (const id in ABILITIES) {
     const def = ABILITIES[id];
@@ -1536,26 +1536,26 @@ function applyChoice(world, choice) {
 // browser, a stub in Node) so the whole layer can be tested headless.
 const SAVE_KEY = 'shinobi.save.v1';
 const CLANS = {
-  uchiha: {
-    id: 'uchiha', name: 'Uchiha', unlockMinutes: 0,
+  ember: {
+    id: 'ember', name: 'Ember', unlockMinutes: 0,
     hp: 0.80, chakra: 1.05, speed: 1.10,
     trait: 'Keen Eye: 15% chance on hit to Stun (1 s). Fire jutsu gain +10% crit.',
     short: 'Glass cannon · fire · crit',
   },
-  nara: {
-    id: 'nara', name: 'Nara', unlockMinutes: 30,
+  stoneward: {
+    id: 'stoneward', name: 'Stoneward', unlockMinutes: 30,
     hp: 0.95, chakra: 1.15, speed: 0.90,
-    trait: 'Shadow Stitch: enemies within 4 m are slowed 30% and take +10% damage.',
+    trait: 'Stone Grasp: enemies within 4 m are slowed 30% and take +10% damage.',
     short: 'Zoning · control · chakra',
   },
-  hyuga: {
-    id: 'hyuga', name: 'Hyuga', unlockMinutes: 90,
+  gale: {
+    id: 'gale', name: 'Gale', unlockMinutes: 90,
     hp: 1.15, chakra: 0.90, speed: 0.95,
-    trait: 'Gentle Palm: your hits knock enemies back; Staggered enemies take +20% damage.',
+    trait: 'Gale Palm: your hits knock enemies back; Staggered enemies take +20% damage.',
     short: 'Frontliner · knockback · tank',
   },
-  uzumaki: {
-    id: 'uzumaki', name: 'Uzumaki', unlockMinutes: 180,
+  tide: {
+    id: 'tide', name: 'Tide', unlockMinutes: 180,
     hp: 1.10, chakra: 1.10, speed: 0.80,
     trait: 'Vitality: +1 Overcharge stack. Killing an enemy below 30% HP restores 2 HP.',
     short: 'Sustain · big pool · slow',
@@ -1581,17 +1581,17 @@ const CLAN_TREE = {
   flat: 100,
   // each rank gives the clan a small bonus in its own direction
   bonus: {
-    uchiha: { crit: 0.03 },
-    nara: { slow: 0.06 },
-    hyuga: { hp: 0.05 },
-    uzumaki: { regen: 0.25 },
+    ember: { crit: 0.03 },
+    stoneward: { slow: 0.06 },
+    gale: { hp: 0.05 },
+    tide: { regen: 0.25 },
   },
 };
 const ARSENAL_COST = { 2: 50, 3: 150, ult: 200 };
-// Ultimates: Cataclysm is the free starter. Susanoo + Toad are 200 Seals each (design §6).
+// Ultimates: Cataclysm is the free starter. Spectral + Toad are 200 Seals each (design §6).
 const ULTIMATES = [
-  { id: 'susanoo', name: 'Susanoo Ribs', desc: '90% reduction, status immunity, +50% damage for 5s.' },
-  { id: 'toad', name: 'Summoning: Toad Sage', desc: 'A toad fights beside you.' },
+  { id: 'spectral', name: 'Spectral Guard', desc: '90% reduction, status immunity, +50% damage for 5s.' },
+  { id: 'toad', name: 'Summoning: Elder Toad', desc: 'A toad fights beside you.' },
 ];
 const ULTIMATE_COST = 200;
 function defaultSave() {
@@ -1602,27 +1602,52 @@ function defaultSave() {
     survivedMinutes: 0,
     runs: 0,
     wins: 0,
-    clan: 'uchiha',
-    clans: { uchiha: true, nara: false, hyuga: false, uzumaki: false },
+    clan: 'ember',
+    clans: { ember: true, stoneward: false, gale: false, tide: false },
     global: { hp: 0, dmg: 0, spd: 0, mag: 0, chk: 0 },
     arsenal: {},
-    clanTree: { uchiha: 0, nara: 0, hyuga: 0, uzumaki: 0 },
-    legacy: { uchiha: false, nara: false, hyuga: false, uzumaki: false },
+    clanTree: { ember: 0, stoneward: 0, gale: 0, tide: 0 },
+    legacy: { ember: false, stoneward: false, gale: false, tide: false },
     ascension: 0,
     bestTime: 0,
     // FIX Batch 6 (Banish purchases): +1 Banish charge per purchase, max 2 bought, 50 Seals each. In-run charges = 1 + this.
     banish: 0,
     // FIX Batch 7: Ultimates owned beyond the free Cataclysm.
-    ultimates: { susanoo: false, toad: false },
+    ultimates: { spectral: false, toad: false },
   };
 }
 
 // FIX Batch 7 (crash-mid-write): load tries main save, then the backup written by writeSave(). If both fail, fresh save.
+// MINIMAL IP RENAME (2026-11-13): old saves use uchiha/nara/hyuga/uzumaki/susanoo.
+// Migrate them to ember/stoneward/gale/tide/spectral so old saves keep working.
+const CLAN_MIGRATION = { uchiha: 'ember', nara: 'stoneward', hyuga: 'gale', uzumaki: 'tide' };
+const ULTIMATE_MIGRATION = { susanoo: 'spectral' };
+function migrateSave(parsed) {
+  if (!parsed || typeof parsed !== 'object') return parsed;
+  if (parsed.clan && CLAN_MIGRATION[parsed.clan]) parsed.clan = CLAN_MIGRATION[parsed.clan];
+  for (const [oldKey, newKey] of Object.entries(CLAN_MIGRATION)) {
+    for (const bucket of ['clans', 'clanTree', 'legacy']) {
+      if (parsed[bucket] && parsed[bucket][oldKey] !== undefined) {
+        if (parsed[bucket][newKey] === undefined) parsed[bucket][newKey] = parsed[bucket][oldKey];
+        delete parsed[bucket][oldKey];
+      }
+    }
+  }
+  if (parsed.ultimates) {
+    for (const [oldKey, newKey] of Object.entries(ULTIMATE_MIGRATION)) {
+      if (parsed.ultimates[oldKey] !== undefined) {
+        if (parsed.ultimates[newKey] === undefined) parsed.ultimates[newKey] = parsed.ultimates[oldKey];
+        delete parsed.ultimates[oldKey];
+      }
+    }
+  }
+  return parsed;
+}
 function loadSave(storage) {
   const d = defaultSave();
   const tryParse = (raw) => {
     if (!raw) return null;
-    const parsed = JSON.parse(raw);
+    const parsed = migrateSave(JSON.parse(raw));
     return { ...d, ...parsed,
       global: { ...d.global, ...(parsed.global || {}) },
       ultimates: { ...d.ultimates, ...(parsed.ultimates || {}) },
@@ -1736,12 +1761,12 @@ function selectClan(save, clan) {
 // ---------- run modifiers ----------
 function metaModifiers(save) {
   const g = save.global;
-  const clan = CLANS[save.clan] || CLANS.uchiha;
+  const clan = CLANS[save.clan] || CLANS.ember;
   const tree = save.clanTree[save.clan] || 0;
   const bonus = CLAN_TREE.bonus[save.clan] || {};
   return {
     clan: clan.id,
-    // FIX Batch 2: base HP is 150 per design, not 170 (Uchiha was getting 136 instead of 120).
+    // FIX Batch 2: base HP is 150 per design, not 170 (Ember was getting 136 instead of 120).
     // FIX Batch 7: Academy bonuses to design — HP +10/node, Speed +2%/node, Chakra +5%/node (was +12, +3%, +10%).
     maxHp: Math.round(150 * clan.hp) + (g.hp || 0) * 10 + (bonus.hp || 0) * 150,
     speedMult: clan.speed * (1 + (g.spd || 0) * 0.02),
@@ -1872,11 +1897,11 @@ class World {
     this.noSafeZone = m.noSafeZone;
     this.clan = m.clan;
     this.clanRegen = m.regen || 0;
-    this.naraSlow = m.slow || 0;
+    this.stonewardSlow = m.slow || 0;
     this.abilities = [{ id: 'fireball', rank: 1, cd: 0, cdMax: ABILITIES.fireball.cd }];
     this.passives = [];
     this.ultimate = this.ultimate || 'cataclysm';
-    this.buffs = { susanoo: 0, lightningArmor: 0 };
+    this.buffs = { spectral: 0, lightningArmor: 0 };
     this._thornsCd = 0;
     this.input = { x: 0, y: 0, dash: false, ult: false };
 
@@ -1951,7 +1976,7 @@ class World {
   }
 
   calcDamage(coeff, rank) {
-    const sus = this.buffs && this.buffs.susanoo > 0 ? 1.5 : 1;
+    const sus = this.buffs && this.buffs.spectral > 0 ? 1.5 : 1;
     return coeff * RANK_MULT[rank] * this.player.atk * this.player.dmgMult * (this._empowerDmg || 1) * sus;
   }
 
@@ -2157,22 +2182,22 @@ class World {
     let crit = false;
     if (opts.crit !== undefined) crit = opts.crit;
     else if (!opts.dot) {
-      const fireBonus = this.clan === 'uchiha' && opts.element === 'fire' ? 0.10 : 0;
+      const fireBonus = this.clan === 'ember' && opts.element === 'fire' ? 0.10 : 0;
       if (this.rng.chance(p.crit + fireBonus)) crit = true;
     }
 
     // clan traits (memo §3 — mechanical, never raw percentage stats)
     if (!opts.dot) {
-      if (this.clan === 'uchiha' && this.rng.chance(0.15)) applyStatus(this, e, 'stunned', { stacks: 1, source: 'clan' });
-      if (this.clan === 'hyuga') {
+      if (this.clan === 'ember' && this.rng.chance(0.15)) applyStatus(this, e, 'stunned', { stacks: 1, source: 'clan' });
+      if (this.clan === 'gale') {
         const dx = e.x - p.x, dy = e.y - p.y;
         const d = Math.hypot(dx, dy) || 1;
         e.x += (dx / d) * 26; e.y += (dy / d) * 26;
         applyStatus(this, e, 'staggered', { stacks: 1, source: 'clan' });
       }
     }
-    // FIX Batch 3 (Burn DoT is FLAT): Nara + Staggered multipliers do NOT apply to DoT. Design: Burn stacks add FLAT after multipliers.
-    if (!opts.dot && this.naraSlow && e.naraMarked) dmg *= 1.10;
+    // FIX Batch 3 (Burn DoT is FLAT): Stoneward + Staggered multipliers do NOT apply to DoT. Design: Burn stacks add FLAT after multipliers.
+    if (!opts.dot && this.stonewardSlow && e.stonewardMarked) dmg *= 1.10;
 
     // step 7 — damage calculation
     if (!opts.dot) dmg *= statusDamageTakenMult(e);
@@ -2297,11 +2322,11 @@ class World {
     this.player.kills++;
     this.kills++;
     this.addChakra(isElite ? 10 : 1);
-    // FIX Batch 1 (bug: Uzumaki heal always true):
+    // FIX Batch 1 (bug: Tide heal always true):
     // Old code checked e.hp < 30% AFTER death (e.hp <= 0, always true).
     // Now check hp BEFORE the killing blow, passed in as opts.hpBefore.
     const hpBeforeKill = opts.hpBefore !== undefined ? opts.hpBefore : e.hp;
-    if (this.clan === 'uzumaki' && hpBeforeKill < e.maxHp * 0.3) {
+    if (this.clan === 'tide' && hpBeforeKill < e.maxHp * 0.3) {
       this.player.hp = Math.min(this.player.maxHp, this.player.hp + 2);
     }
     // FIX Batch 1 (bug: Marked onDeathChain never fired):
@@ -2422,7 +2447,7 @@ class World {
     const p = this.player;
     if (this.state !== 'playing') return;
     if (p.iframe > 0) return;
-    if (this.buffs.susanoo > 0) amount *= 0.1;
+    if (this.buffs.spectral > 0) amount *= 0.1;
     if (this.buffs.lightningArmor > 0 && this._thornsCd <= 0) {
       this._thornsCd = 0.4;
       const list = this.enemies.active;
@@ -2454,7 +2479,7 @@ class World {
     const armed = p.overcharge;
     this._empowerDmg = armed ? 1.5 : 1;
     this._empowerRadius = armed ? 1.3 : 1;
-    this._empowerStacks = armed ? (this.clan === 'uzumaki' ? 2 : 1) : 0;
+    this._empowerStacks = armed ? (this.clan === 'tide' ? 2 : 1) : 0;
     if (armed) p.overcharge = false;
     let ok = false;
     try { ok = this.castJutsu(ab); } catch (err) { ok = false; }
@@ -2702,7 +2727,7 @@ class World {
       this.bus.emit('flow:start', { t: 5.0 });
       this.recalc();
     }
-    if (id === 'susanoo') this.addBuff('susanoo', 5.0);
+    if (id === 'spectral') this.addBuff('spectral', 5.0);
     else if (id === 'toad') this.summonToad();
     else this.castCataclysm();
     this.shake = Math.min(16, this.shake + 9);
@@ -2836,8 +2861,8 @@ class World {
     // Out-of-combat recovery: 4 s clean, then a slow trickle. Rewards clean kiting.
     p.regenT = p.hitFlash > 0 ? 0 : p.regenT + dt;
     if (p.regenT > 4 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + 1.1 * dt);
-    // FIX Batch 2 (Uzumaki regen was dead): clanRegen was computed in meta.js but never used.
-    // Uzumaki clan tree regen (0.25 / rank, up to 1.0 HP/s) now actually heals, always.
+    // FIX Batch 2 (Tide regen was dead): clanRegen was computed in meta.js but never used.
+    // Tide clan tree regen (0.25 / rank, up to 1.0 HP/s) now actually heals, always.
     if (this.clanRegen > 0 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + this.clanRegen * dt);
     // Dash recharge + Flow timer. Flow expiry calls recalc so CDR drops back to base.
     if (p.dashCharges < p.dashMax) {
@@ -4141,7 +4166,7 @@ class Renderer {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.ellipse(p.x, p.y + 11, 17, 7, 0, 0, Math.PI * 2); ctx.stroke();
     // buff auras
-    if (this.world.buffs.susanoo > 0) {
+    if (this.world.buffs.spectral > 0) {
       ctx.globalCompositeOperation = 'lighter';
       ctx.globalAlpha = 0.35 + Math.sin(this.world.t * 6) * 0.12;
       ctx.strokeStyle = '#c9a8ff';
@@ -4795,7 +4820,7 @@ class UI {
         </div>
         <div class="metastrip">
           <span>${save ? save.seals : 0} seals</span>
-          <span>${save ? (CLANS[save.clan] || CLANS.uchiha).name : 'Uchiha'}</span>
+          <span>${save ? (CLANS[save.clan] || CLANS.ember).name : 'Ember'}</span>
           <span>Ascension ${save ? save.ascension : 0}</span>
           <div class="btn ghost" id="acadbtn">Academy</div>
         </div>

@@ -84,19 +84,19 @@ Compliance is checked by the template at the bottom.
 
 | Clan | HP | Chakra gain | Move speed | Total |
 |---|---|---|---|---|
-| Uchiha | 80 | 105 | 110 | 295 |
-| Nara | 95 | 115 | 90 | 300 |
-| Hyuga | 115 | 90 | 95 | 300 |
-| Uzumaki | 110 | 110 | 80 | 300 |
+| Ember | 80 | 105 | 110 | 295 |
+| Stoneward | 95 | 115 | 90 | 300 |
+| Gale | 115 | 90 | 95 | 300 |
+| Tide | 110 | 110 | 80 | 300 |
 
 **Clan traits (mechanical only):**
 
 | Clan | Trait |
 |---|---|
-| **Uchiha** | 15% chance on hit to apply Stun (1 s). Fire jutsu gain +10% crit chance. |
-| **Nara** | Shadow Stitch: 4 m aura, −30% enemy move speed. Slowed enemies take +10% damage. |
-| **Hyuga** | Basic attacks apply knockback. Knockback applies **Stagger** — staggered enemies take +20% damage for 2 s. |
-| **Uzumaki** | +1 max Overcharge stack (empowered cast gains 2 status stacks). Killing an enemy below 30% HP restores 2 HP. |
+| **Ember** | 15% chance on hit to apply Stun (1 s). Fire jutsu gain +10% crit chance. |
+| **Stoneward** | Stone Grasp: 4 m aura, −30% enemy move speed. Slowed enemies take +10% damage. |
+| **Gale** | Basic attacks apply knockback. Knockback applies **Stagger** — staggered enemies take +20% damage for 2 s. |
+| **Tide** | +1 max Overcharge stack (empowered cast gains 2 status stacks). Killing an enemy below 30% HP restores 2 HP. |
 
 ---
 
@@ -109,7 +109,7 @@ Compliance is checked by the template at the bottom.
 | **C3** | No priority queue. All cooldowns resolve independently on the fixed tick |
 | **C4** | Banish: 1 free per run, +2 purchasable, max 3 |
 | **C5** | Unlock direction: all Tier 1 free at start. Academy unlocks Tier 2/3 only |
-| **C6** | Clans: Uchiha free. Nara at 30 min survived, Hyuga at 90, Uzumaki at 180 |
+| **C6** | Clans: Ember free. Stoneward at 30 min survived, Gale at 90, Tide at 180 |
 | **C7** | In-run currency: **Scrolls**. Meta currency: **Seals**. "Scroll Fragments" retired |
 | **C8** | Status registry is the core data structure (see `03_STATUS_REGISTRY.md`) |
 | **C9** | Fusion = Prime/Detonate, unified. Firestorm *is* the detonate visual |

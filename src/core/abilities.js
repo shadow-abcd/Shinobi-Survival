@@ -167,13 +167,13 @@ export const ULTIMATES = {
     desc: 'A core of raw chakra in the densest cluster: 20× ATK in 400 px, every status at max stacks, every pair detonated.',
     cast(world) { world.castCataclysm(); },
   },
-  susanoo: {
-    id: 'susanoo', name: 'Susanoo Ribs', tag: 'Defensive',
+  spectral: {
+    id: 'spectral', name: 'Spectral Guard', tag: 'Defensive',
     desc: 'Five seconds of 90% damage reduction, status immunity and +50% damage.',
-    cast(world) { world.addBuff('susanoo', 5.0); },
+    cast(world) { world.addBuff('spectral', 5.0); },
   },
   toad: {
-    id: 'toad', name: 'Summoning: Toad Sage', tag: 'Utility',
+    id: 'toad', name: 'Summoning: Elder Toad', tag: 'Utility',
     desc: 'A giant toad fights beside you for ten seconds, taunting and burning what it hits.',
     cast(world) { world.summonToad(); },
   },

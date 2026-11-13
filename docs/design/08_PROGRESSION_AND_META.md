@@ -70,28 +70,28 @@ Four clans, defined by stat floors + mechanical traits.
 
 | Clan | HP | Chakra gain | Move speed | Total | Identity |
 |---|---|---|---|---|---|
-| Uchiha | 80 | 105 | 110 | 295 | Glass cannon |
-| Nara | 95 | 115 | 90 | 300 | Zoning |
-| Hyuga | 115 | 90 | 95 | 300 | Frontliner |
-| Uzumaki | 110 | 110 | 80 | 300 | Sustain |
+| Ember | 80 | 105 | 110 | 295 | Glass cannon |
+| Stoneward | 95 | 115 | 90 | 300 | Zoning |
+| Gale | 115 | 90 | 95 | 300 | Frontliner |
+| Tide | 110 | 110 | 80 | 300 | Sustain |
 
 **Traits:**
 
 | Clan | Trait |
 |---|---|
-| Uchiha | 15% chance on hit to Stun (1 s). Fire jutsu +10% crit. |
-| Nara | Shadow Stitch aura: 4 m, −30% enemy speed. Slowed take +10% damage. |
-| Hyuga | Basic attacks apply knockback. Knockback → Stagger (2 s, +20% incoming damage). |
-| Uzumaki | +1 max Overcharge stack (empowered cast gains 2 status stacks). Kill below 30% HP restores 2 HP. |
+| Ember | 15% chance on hit to Stun (1 s). Fire jutsu +10% crit. |
+| Stoneward | Stone Grasp aura: 4 m, −30% enemy speed. Slowed take +10% damage. |
+| Gale | Basic attacks apply knockback. Knockback → Stagger (2 s, +20% incoming damage). |
+| Tide | +1 max Overcharge stack (empowered cast gains 2 status stacks). Kill below 30% HP restores 2 HP. |
 
 ### Clan acquisition (Memo C6)
 
 | Clan | Unlock requirement |
 |---|---|
-| Uchiha | Available at start |
-| Nara | 30 total minutes survived (across all runs) |
-| Hyuga | 90 minutes survived |
-| Uzumaki | 180 minutes survived |
+| Ember | Available at start |
+| Stoneward | 30 total minutes survived (across all runs) |
+| Gale | 90 minutes survived |
+| Tide | 180 minutes survived |
 
 Persistence: survives death. Stored in save.
 
@@ -135,7 +135,7 @@ Between runs. Spend Seals on permanent upgrades.
 
 **Pillar 3 — Clan Specialization**
 Each clan has its own tree. 5 nodes per tree, 100 Seals each.
-- Example Uchiha tree: Genjutsu duration +0.2 s per node · Genjutsu proc chance +2% per node · Fire crit +5% per node · Cooldown reduction (Fire only) +3% per node · Capstone: Genjutsu spreads to nearby enemies
+- Example Ember tree: Illusion duration +0.2 s per node · Illusion proc chance +2% per node · Fire crit +5% per node · Cooldown reduction (Fire only) +3% per node · Capstone: Illusion spreads to nearby enemies
 
 100% a clan tree to unlock a **Legacy Trait**.
 
@@ -196,7 +196,7 @@ The screen that delivers the Seals. Previously undesigned.
 │  [Fire] Fireball R5 · [Fire] Fire Wall R3 · ...    │
 │                                                      │
 │  NEXT UNLOCK                                         │
-│  Nara clan unlocks in 3 more minutes survived       │
+│  Stoneward clan unlocks in 3 more minutes survived       │
 │                                                      │
 │  ┌──────────────────┐  ┌──────────────────┐        │
 │  │  SPEND IN ACADEMY │  │  RUN AGAIN        │        │

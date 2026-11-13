@@ -213,18 +213,18 @@ Systems communicate through **Godot signals** or a `SignalBus` autoload. No syst
   "version": 1,
   "playerId": "uuid",
   "seals": 1240,
-  "clansUnlocked": ["Uchiha", "Nara"],
+  "clansUnlocked": ["Ember", "Stoneward"],
   "clanMastery": {
-    "Uchiha": { "nodes": ["GENJUTSU_I", "GENJUTSU_II"], "percent": 45 },
-    "Nara": { "nodes": [], "percent": 0 }
+    "Ember": { "nodes": ["ILLUSION_I", "ILLUSION_II"], "percent": 45 },
+    "Stoneward": { "nodes": [], "percent": 0 }
   },
   "arsenalUnlocked": ["fireball", "wind_slash", "water_bullet"],
   "globalUpgrades": {
     "hp": 2, "chakraGain": 1, "speed": 0
   },
   "legacyTraits": {
-    "owned": ["NARA_SLOW"],
-    "equipped": ["NARA_SLOW"]
+    "owned": ["STONEWARD_SLOW"],
+    "equipped": ["STONEWARD_SLOW"]
   },
   "achievements": {
     "firstBossKill": true,
