@@ -63,6 +63,8 @@ export class World {
       atk: 10, facing: { x: 1, y: 0 },
       // FIX Batch 4 (XP curve): design is XP to level N = 15 * 1.12^(N-1). Was 18 * 1.13^(N-1) — ~2x too slow at level 40.
       level: 1, xp: 0, xpNeed: 15, chakra: 0, overcharge: false,
+      // FIX Batch 5 (Rank): Genin 5 passives / 1 dash, Chunin 6 passives, Jonin 2 dashes, Kage Flow State.
+      rank: 'genin', maxPassives: 5, dashMax: 1, dashCharges: 1, flowUnlocked: false, flowUsed: false, flowT: 0,
       dashCd: 0, dashT: 0, iframe: 0, dashDir: { x: 1, y: 0 },
       hitFlash: 0, invulnFlash: 0, moving: false, kills: 0, regenT: 0,
     };
@@ -168,10 +170,27 @@ export class World {
   recalc() {
     const p = this.player;
     p.cdr = Math.min(0.7, p.cdr);
+    // FIX Batch 5 (Flow State): while Flow is active, effective CDR is 70% regardless of base CDR.
+    const effCdr = p.flowT > 0 ? 0.7 : p.cdr;
     for (const ab of this.abilities) {
       const base = ABILITIES[ab.id].cd;
-      ab.cdMax = Math.max(0.2, base * (1 - p.cdr));
+      ab.cdMax = Math.max(0.2, base * (1 - effCdr));
     }
+  }
+
+  // FIX Batch 5 (Breakthrough): promotion is sequential, never reversed, no stat boost.
+  promote(rank) {
+    const order = ['genin', 'chunin', 'jonin', 'kage'];
+    const cur = order.indexOf(this.player.rank || 'genin');
+    const next = order.indexOf(rank);
+    if (next !== cur + 1) return false;
+    this.player.rank = rank;
+    if (rank === 'chunin') this.player.maxPassives = 6;
+    if (rank === 'jonin') { this.player.dashMax = 2; this.player.dashCharges = 2; this.player.dashCd = 0; }
+    if (rank === 'kage') this.player.flowUnlocked = true;
+    this.bus.emit('rank:breakthrough', { rank });
+    this.recalc();
+    return true;
   }
 
   // ---------- spawning ----------
@@ -889,6 +908,12 @@ export class World {
     p.chakra = 0;
     p.overcharge = false;
     const id = this.ultimate || 'cataclysm';
+    // FIX Batch 5 (Flow State): Kage only, once per run, 5s of 70% CDR on Ultimate.
+    if (p.flowUnlocked && !p.flowUsed) {
+      p.flowUsed = true; p.flowT = 5.0;
+      this.bus.emit('flow:start', { t: 5.0 });
+      this.recalc();
+    }
     if (id === 'susanoo') this.addBuff('susanoo', 5.0);
     else if (id === 'toad') this.summonToad();
     else this.castCataclysm();
@@ -989,10 +1014,13 @@ export class World {
     // FIX Batch 1 (bug: dash sticky / auto-dash every 1.8s):
     // Consume the press. One press = one dash, even if the key / button
     // stays held. app.js sets input.dash=true on keydown / button tap.
+    // FIX Batch 5 (dash charges): Genin 1 charge, Jonin 2. One charge per 1.8s recharge.
+    // dashCd is now "time until next charge". When charges > 0, dashCd is 0 so the bot's dashCd<=0 check still means "can dash".
     if (inp.dash) {
       inp.dash = false;
-      if (p.dashCd <= 0) {
-        p.dashCd = 1.8;
+      if (p.dashCharges > 0) {
+        p.dashCharges--;
+        if (p.dashCharges < p.dashMax) p.dashCd = 1.8;
         p.dashT = 0.16;
         p.iframe = 0.30;
         p.dashDir = p.moving ? { x: ix, y: iy } : { ...p.facing };
@@ -1006,7 +1034,12 @@ export class World {
     // FIX Batch 2 (Uzumaki regen was dead): clanRegen was computed in meta.js but never used.
     // Uzumaki clan tree regen (0.25 / rank, up to 1.0 HP/s) now actually heals, always.
     if (this.clanRegen > 0 && p.hp < p.maxHp) p.hp = Math.min(p.maxHp, p.hp + this.clanRegen * dt);
-    p.dashCd = Math.max(0, p.dashCd - dt);
+    // Dash recharge + Flow timer. Flow expiry calls recalc so CDR drops back to base.
+    if (p.dashCharges < p.dashMax) {
+      p.dashCd = Math.max(0, p.dashCd - dt);
+      if (p.dashCd <= 0) { p.dashCharges++; if (p.dashCharges < p.dashMax) p.dashCd = 1.8; else p.dashCd = 0; }
+    } else p.dashCd = 0;
+    if (p.flowT > 0) { p.flowT = Math.max(0, p.flowT - dt); if (p.flowT === 0) { this.bus.emit('flow:end', {}); this.recalc(); } }
     p.iframe = Math.max(0, p.iframe - dt);
     p.hitFlash = Math.max(0, p.hitFlash - dt * 3);
     this.shake = Math.max(0, this.shake - dt * 22);

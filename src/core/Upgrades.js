@@ -13,6 +13,27 @@ export const PASSIVES = {
 export const PASSIVE_SLOTS = 6;
 export const ACTIVE_SLOTS = 4;
 
+// FIX Batch 5 (Breakthrough / Rank): design §8.1 — Genin 5/6 passives, Chunin 6/6, Jonin +1 dash charge, Kage Flow State.
+// Rank is player progression, never reversed. Granted by Breakthrough, a level-up MENU OPTION that costs the pick.
+export const RANKS = ['genin', 'chunin', 'jonin', 'kage'];
+export const RANK_NAMES = { genin: 'Genin', chunin: 'Chunin', jonin: 'Jonin', kage: 'Kage' };
+export const BREAKTHROUGH = {
+  chunin: { rank: 'chunin', level: 5, name: 'Breakthrough: Chunin', desc: 'Promote to Chunin. +1 passive slot (6/6). No stat boost — Rank grants unlocks, not boosts.' },
+  jonin: { rank: 'jonin', level: 15, name: 'Breakthrough: Jonin', desc: 'Promote to Jonin. +1 dash charge (2 total).' },
+  kage: { rank: 'kage', level: 25, name: 'Breakthrough: Kage', desc: 'Promote to Kage. Unlocks Flow State: 5s of 70% CDR on Ultimate, once per run.' },
+};
+export function passiveSlotsForRank(rank) { return rank === 'genin' ? 5 : 6; }
+export function nextBreakthrough(world) {
+  const rank = world.player?.rank || 'genin';
+  const idx = RANKS.indexOf(rank);
+  if (idx < 0 || idx >= RANKS.length - 1) return null;
+  const next = RANKS[idx + 1];
+  const def = BREAKTHROUGH[next];
+  if (!def) return null;
+  if ((world.player?.level || 1) < def.level) return null;
+  return { kind: 'breakthrough', id: 'breakthrough-' + next, rank: next, w: 1, name: def.name, element: 'rank', tag: 'Breakthrough', desc: def.desc };
+}
+
 export function abilityAvailable(world, id) {
   const def = ABILITIES[id];
   const owned = world.abilities.find((a) => a.id === id);
@@ -52,7 +73,9 @@ export function rollChoices(world, n = 3) {
       });
     }
   }
-  if (world.passives.length < PASSIVE_SLOTS) {
+  // FIX Batch 5: Genin can only hold 5 passives. Chunin+ can hold 6.
+  const maxPassives = passiveSlotsForRank(world.player?.rank || 'genin');
+  if (world.passives.length < maxPassives) {
     for (const id in PASSIVES) {
       const owned = world.passives.find((p) => p.id === id);
       if (owned && owned.rank >= PASSIVES[id].max) continue;
@@ -67,11 +90,17 @@ export function rollChoices(world, n = 3) {
   // Every pool can run dry (all abilities and passives maxed). The design's answer is a
   // heal/reroll card rather than an empty menu.
   if (pool.length === 0) {
-    return [{ kind: 'recover', id: 'recover', w: 1, name: 'Second Wind', element: 'stat', tag: 'Recovery',
-      desc: 'Restore 30% of your health.' }];
+    const bt0 = nextBreakthrough(world);
+    const rec = { kind: 'recover', id: 'recover', w: 1, name: 'Second Wind', element: 'stat', tag: 'Recovery',
+      desc: 'Restore 30% of your health.' };
+    return bt0 ? [bt0, rec] : [rec];
   }
   const picked = [];
   const used = new Set();
+  // FIX Batch 5: Breakthrough is a level-up MENU OPTION, not automatic. It appears as one of the 3 picks when eligible.
+  // If the player skips it (picks another card), it stays available next level-up — Wait vs Promote is the choice.
+  const bt = nextBreakthrough(world);
+  if (bt) { picked.push(bt); used.add(bt.kind + bt.id); }
   // Early build: always offer at least one jutsu until the four slots are full, otherwise
   // the Prime/Detonate loop never starts and the run becomes passives-only.
   if (world.abilities.length < ACTIVE_SLOTS) {
@@ -93,6 +122,12 @@ export function rollChoices(world, n = 3) {
 }
 
 export function applyChoice(world, choice) {
+  if (choice.kind === 'breakthrough') {
+    // Promotion itself lives in world.promote() so rank, slots, dash and Flow stay in one place.
+    if (typeof world.promote === 'function') world.promote(choice.rank);
+    else { world.player.rank = choice.rank; world.player.maxPassives = passiveSlotsForRank(choice.rank); }
+    return;
+  }
   if (choice.kind === 'recover') {
     const p = world.player;
     p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.3);
@@ -112,6 +147,8 @@ export function applyChoice(world, choice) {
     return;
   }
   let owned = world.passives.find((p) => p.id === choice.id);
+  // FIX Batch 5: never exceed the rank's passive cap (Genin 5, Chunin+ 6) even if applyChoice is called directly.
+  if (!owned && world.passives.length >= passiveSlotsForRank(world.player?.rank || 'genin')) return;
   if (owned) owned.rank = Math.min(PASSIVES[choice.id].max, owned.rank + 1);
   else { owned = { id: choice.id, rank: 1 }; world.passives.push(owned); }
   PASSIVES[choice.id].apply(world.player);
