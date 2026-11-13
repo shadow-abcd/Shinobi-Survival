@@ -105,6 +105,14 @@ export function updateEnemy(world, e, dt) {
     }
   }
 
+  // Nara: shadow zone slows and marks for extra damage
+  if (world.naraSlow && dist < 260) {
+    e.naraMarked = true;
+    speed *= 0.7 - Math.min(0.2, world.naraSlow);
+  } else {
+    e.naraMarked = false;
+  }
+
   // contact damage
   e.touchT -= dt;
   const pr = p.r + e.r;

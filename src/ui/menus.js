@@ -1,6 +1,8 @@
 // DOM HUD + overlay screens (start, level-up, run-end). No game logic here.
 import { ABILITIES, ULTIMATES, ELEMENTS } from '../core/abilities.js';
 import { PASSIVES } from '../core/upgrades.js';
+import { CLANS } from '../core/meta.js';
+import { academyHTML, bindAcademy } from './academy.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -29,7 +31,12 @@ export class UI {
     document.getElementById('hud').style.opacity = '0';
   }
 
-  showStart(onStart) {
+  showAcademy(save, onBuy, onClose) {
+    this.showOverlay(academyHTML(save));
+    bindAcademy(this.overlay, save, onBuy, onClose);
+  }
+
+  showStart(onStart, save, onAcademy) {
     const ults = Object.values(ULTIMATES).map((u, i) => `
       <div class="ultcard" data-id="${u.id}">
         <div class="k">${u.tag}</div>
@@ -62,6 +69,12 @@ export class UI {
           <div class="sub" style="margin-bottom:10px">Choose your ultimate</div>
           <div class="ultlist">${ults}</div>
         </div>
+        <div class="metastrip">
+          <span>${save ? save.seals : 0} seals</span>
+          <span>${save ? (CLANS[save.clan] || CLANS.uchiha).name : 'Uchiha'}</span>
+          <span>Ascension ${save ? save.ascension : 0}</span>
+          <div class="btn ghost" id="acadbtn">Academy</div>
+        </div>
         <div class="btn" id="startbtn">Enter the forest</div>
         <div class="hint">Best on a keyboard. Touch works: left stick, right buttons.</div>
       </div>`);
@@ -74,6 +87,8 @@ export class UI {
       };
     });
     $('startbtn').onclick = () => { this.hideOverlay(); onStart(chosen); };
+    const ab = $('acadbtn');
+    if (ab && onAcademy) ab.onclick = onAcademy;
   }
 
   showLevelUp(level, choices, onPick) {
@@ -121,7 +136,7 @@ export class UI {
     document.getElementById('fightbtn').onclick = () => { this.hideOverlay(); onFight(); };
   }
 
-  showRunEnd({ win, time, level, kills, damage, abilities, passives, bossPct, stage, extracted }, onRestart) {
+  showRunEnd({ win, time, level, kills, damage, abilities, passives, bossPct, stage, extracted, sealsEarned, sealsTotal }, onRestart) {
     const mm = Math.floor(time / 60), ss = Math.floor(time % 60).toString().padStart(2, '0');
     const build = abilities.map((a) => `${ABILITIES[a.id].name} <span style="opacity:.55">R${a.rank}</span>`).join(' · ');
     const pas = passives.length
@@ -139,6 +154,7 @@ export class UI {
           <div class="stat-box"><div class="v">${stage}/4</div><div class="l">Bosses</div></div>
           <div class="stat-box"><div class="v">${kills}</div><div class="l">Kills</div></div>
           <div class="stat-box"><div class="v">${Math.round(damage / 100) / 10}k</div><div class="l">Damage</div></div>
+          <div class="stat-box"><div class="v" style="color:#ffd27a">+${sealsEarned || 0}</div><div class="l">Seals · ${sealsTotal || 0} owned</div></div>
           ${win ? '' : `<div class="stat-box"><div class="v">${bossPct}%</div><div class="l">Ronin HP left</div></div>`}
         </div>
         <div class="card stat" style="max-width:640px;margin:18px auto 0;cursor:default;text-align:left;">

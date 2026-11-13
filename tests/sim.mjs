@@ -3,8 +3,9 @@
 import { World, TICK } from '../src/core/world.js';
 import { botStep } from './bot.mjs';
 
-export function play(seed, { verbose = false } = {}) {
+export function play(seed, { verbose = false, save = null } = {}) {
   const w = new World(seed);
+  if (save) w.reset(seed, save);
   const dt = TICK;
   const maxTicks = 1300 * 60;
   let peak = 0, nan = false, minHp = 100;

@@ -1,16 +1,18 @@
-# Shinobi Survival — Step 3
+# Shinobi Survival — Step 4
 
 A browser-playable build of the *Shinobi Survival* design package: a full twenty-minute run, five
-elements, twenty jutsu, ten fusions, and all four bosses. The meta layer (Seals, the Academy,
-clans, Ascension) is Step 4.
+elements, twenty jutsu, ten fusions, four bosses, and a meta layer that persists between runs.
 
 Run it:
 
 ```bash
 cd workspace/shinobi
-python3 -m http.server 8099 --bind 127.0.0.1
+python3 serve.py 8099
 # open http://127.0.0.1:8099/
 ```
+
+(`serve.py` is a static server with caching disabled; `python3 -m http.server 8099` works too,
+you may just have to hard-reload after an edit.)
 
 No build step, no dependencies, no network calls. Plain ES modules + Canvas 2D.
 
@@ -73,7 +75,17 @@ inputs are movement, dash and the Ultimate, per the design memo §1.5.
 - **Elites from minute 9**: Shunshin teleporters that blink onto you, and Siphoners that drain your
   Chakra on contact.
 - **Run structure**: death, extraction or victory → run-end summary with build, kills, damage,
-  bosses cleared and final boss HP.
+  bosses cleared, final boss HP and the Seals you earned.
+- **Meta layer (saved in the browser)**:
+  - **Seals** from every run — boss kills, time survived, level, with a 1.3× win multiplier.
+  - **The Academy**: Training (HP, damage, speed, pickup, Chakra gain), Arsenal (unlock every
+    Tier 2 and Tier 3 jutsu), Clans (select a clan, then rank up its tree).
+  - **Four clans** with the memo's stat floors and mechanical traits — Uchiha free, Nara at 30
+    minutes survived, Hyuga at 90, Uzumaki at 180.
+  - **Legacy**: finishing a clan tree earns its Legacy trait for every clan; owning all four is
+    Perfect Shinobi, +10% damage on every run.
+  - **Ascension**: every win raises the tier — enemy HP up, then enemy count, and at A4 the safe
+    zones disappear. No ceiling.
 
 ## Deliberately not in Phase 1
 
@@ -128,6 +140,4 @@ Debug parameters (development only): `?seed=N` fixed seed, `?warp=SECONDS` fast-
 - No audio assets yet; the WebAudio synth is a placeholder for hits, casts and detonations.
 - Mobile layout is functional but untested on a real device.
 - The run-end screen has no meta payout yet: the meta layer is Step 4.
-- No meta layer yet: Seals, the Academy, clan unlocks, Legacy and Ascension are Step 4, so the
-  run-end screen pays out nothing and nothing persists between runs.
 - World phases change light and tint, not geometry; destructible cover and hazards are polish.

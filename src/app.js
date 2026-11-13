@@ -3,6 +3,7 @@ import { World, TICK } from './core/world.js';
 import { Renderer } from './render/renderer.js';
 import { UI } from './ui/menus.js';
 import { Audio } from './ui/audio.js';
+import { loadSave, writeSave, bankRun, metaModifiers } from './core/meta.js';
 import { botStep } from './ui/autopilot.js';
 
 const canvas = document.getElementById('game');
@@ -13,6 +14,10 @@ const params = new URLSearchParams(location.search);
 const seed = params.has('seed') ? parseInt(params.get('seed'), 10) : (Date.now() % 100000);
 
 const world = new World(seed);
+let save = loadSave(window.localStorage);
+// dev helper: ?debugseals=500 seeds a balance for testing the Academy
+if (params.has('debugseals')) { save.seals = parseInt(params.get('debugseals'), 10) || 0; }
+if (params.has('debugasc')) { save.ascension = parseInt(params.get('debugasc'), 10) || 0; }
 const renderer = new Renderer(canvas, world);
 const ui = new UI();
 const audio = new Audio();
@@ -124,7 +129,7 @@ const AUTO = params.get('auto') === '1';
 const NO_MENUS = params.get('nomenu') === '1';
 
 function startRun(ult = params.get('ult') || 'cataclysm') {
-  world.reset(params.has('seed') ? seed : (Date.now() % 100000));
+  world.reset(params.has('seed') ? seed : (Date.now() % 100000), save);
   world.ultimate = ult;
   const realDamage = world.damagePlayer.bind(world);
   if (GOD) world.damagePlayer = () => {};
@@ -148,13 +153,23 @@ function startRun(ult = params.get('ult') || 'cataclysm') {
     lateAnnounced = world.t > 285;
   }
   if (GOD) world.damagePlayer = realDamage;
+  if (params.has('hp1')) { world.player.hp = 1; world.player.iframe = 0; world.player.regenT = 0; }
   acc = 0; started = true; menuOpen = false;
   bossAnnounced = false; lateAnnounced = false;
   audio.init();
   ui.banner_('Whispering Forest', 2.2);
 }
 
-if (AUTO) { startRun(); } else { ui.showStart(startRun); }
+function openAcademy() {
+  ui.showAcademy(save, () => {
+    writeSave(window.localStorage, save);
+    ui.showAcademy(save, refreshAcademy, () => { ui.hideOverlay(); ui.showStart(startRun, save, openAcademy); });
+  }, () => { ui.hideOverlay(); ui.showStart(startRun, save, openAcademy); });
+}
+function refreshAcademy() {
+  ui.showAcademy(save, refreshAcademy, () => { ui.hideOverlay(); ui.showStart(startRun, save, openAcademy); });
+}
+if (AUTO) { startRun(); } else { ui.showStart(startRun, save, openAcademy); }
 
 function handleState() {
   if (world.state === 'levelup' && AUTO) {
@@ -182,6 +197,14 @@ function handleState() {
   }
   if ((world.state === 'dead' || world.state === 'won') && !menuOpen) {
     menuOpen = true;
+    const earned = bankRun(save, {
+      win: world.state === 'won' && !world.extracted,
+      extracted: world.extracted,
+      bosses: world.stageIndex,
+      time: world.t,
+      level: world.player.level,
+    });
+    writeSave(window.localStorage, save);
     ui.showRunEnd({
       win: world.state === 'won', time: world.t, level: world.player.level, kills: world.kills,
       damage: world.damageDealt,
@@ -189,6 +212,7 @@ function handleState() {
       passives: world.passives.map((a) => ({ ...a })),
       bossPct: world.boss ? Math.max(0, Math.round((world.boss.hp / world.boss.maxHp) * 100)) : 100,
       stage: world.stageIndex, extracted: world.extracted,
+      sealsEarned: earned, sealsTotal: save.seals,
     }, () => { menuOpen = false; startRun(world.ultimate); });
   }
 }

@@ -1,0 +1,94 @@
+// The Academy: Seals spending between runs — global stats, arsenal unlocks, clan trees.
+import {
+  CLANS, GLOBAL_UPGRADES, CLAN_TREE, ARSENAL_COST,
+  costOf, clanTreeCost, clanUnlocked, buyGlobal, buyArsenal, buyClanTree,
+  selectClan, perfectShinobi,
+} from '../core/meta.js';
+import { ABILITIES, ELEMENTS } from '../core/abilities.js';
+
+export function academyHTML(save) {
+  const sealLine = `<div class="acad-head"><div><span class="sealcount">${save.seals}</span> <span class="sealword">Seals</span></div>
+    <div class="acad-meta">Ascension ${save.ascension} · ${save.wins} wins · best ${Math.floor(save.bestTime / 60)}:${String(Math.floor(save.bestTime % 60)).padStart(2, '0')}</div></div>`;
+
+  const global = Object.values(GLOBAL_UPGRADES).map((u) => {
+    const rank = save.global[u.id] || 0;
+    const maxed = rank >= u.max;
+    const cost = costOf(u, rank);
+    return `<div class="acad-row ${maxed ? 'maxed' : ''}" data-kind="global" data-id="${u.id}">
+      <div class="ar-name">${u.name}<span class="ar-rank">${rank}/${u.max}</span></div>
+      <div class="ar-desc">${u.desc}</div>
+      <div class="ar-cost">${maxed ? 'maxed' : cost + ' seals'}</div>
+    </div>`;
+  }).join('');
+
+  const arsenal = Object.values(ABILITIES).filter((a) => a.tier >= 2).map((a) => {
+    const owned = !!save.arsenal[a.id];
+    const cost = ARSENAL_COST[a.tier];
+    const col = ELEMENTS[a.element].color;
+    return `<div class="acad-row ${owned ? 'owned' : ''}" data-kind="arsenal" data-id="${a.id}" data-tier="${a.tier}">
+      <div class="ar-name"><span class="dot" style="background:${col}"></span>${a.name}<span class="ar-rank">T${a.tier}</span></div>
+      <div class="ar-desc">${a.desc}</div>
+      <div class="ar-cost">${owned ? 'unlocked' : cost + ' seals'}</div>
+    </div>`;
+  }).join('');
+
+  const clans = Object.values(CLANS).map((c) => {
+    const unlocked = clanUnlocked(save, c.id);
+    const selected = save.clan === c.id;
+    const rank = save.clanTree[c.id] || 0;
+    const maxed = rank >= CLAN_TREE.ranks;
+    const cost = clanTreeCost(save, c.id);
+    const legacy = save.legacy[c.id];
+    return `<div class="acad-row clan ${unlocked ? '' : 'locked'} ${selected ? 'selected' : ''}"
+        data-kind="clan" data-id="${c.id}">
+      <div class="ar-name">${c.name}<span class="ar-rank">${unlocked ? (selected ? 'selected' : 'select') : c.unlockMinutes + ' min'}</span></div>
+      <div class="ar-desc">${c.short} · ${c.trait}</div>
+      <div class="ar-cost">${unlocked ? (maxed ? (legacy ? 'legacy earned' : 'tree maxed') : `tree ${rank}/${CLAN_TREE.ranks} · ${cost}`) : 'locked'}</div>
+    </div>`;
+  }).join('');
+
+  return `<div class="panel acad">
+    ${sealLine}
+    <div class="acad-tabs">
+      <div class="tab active" data-tab="global">Training</div>
+      <div class="tab" data-tab="arsenal">Arsenal</div>
+      <div class="tab" data-tab="clans">Clans</div>
+    </div>
+    <div class="acad-body" data-panel="global">${global}</div>
+    <div class="acad-body hidden" data-panel="arsenal">${arsenal}</div>
+    <div class="acad-body hidden" data-panel="clans">${clans}</div>
+    <div class="acad-foot">
+      ${perfectShinobi(save) ? '<span class="perfect">Perfect Shinobi · +10% damage on every run</span>' : ''}
+      <div class="btn" id="acadclose">Back</div>
+    </div>
+  </div>`;
+}
+
+export function bindAcademy(root, save, onBuy, onClose) {
+  root.querySelectorAll('.tab').forEach((t) => {
+    t.onclick = () => {
+      root.querySelectorAll('.tab').forEach((x) => x.classList.toggle('active', x === t));
+      root.querySelectorAll('.acad-body').forEach((b) => {
+        b.classList.toggle('hidden', b.dataset.panel !== t.dataset.tab);
+      });
+    };
+  });
+  root.querySelectorAll('.acad-row').forEach((row) => {
+    row.onclick = () => {
+      const kind = row.dataset.kind;
+      const id = row.dataset.id;
+      let res;
+      if (kind === 'global') res = buyGlobal(save, id);
+      else if (kind === 'arsenal') res = buyArsenal(save, id, parseInt(row.dataset.tier, 10));
+      else if (kind === 'clan') {
+        if (clanUnlocked(save, id)) {
+          if (save.clan !== id) { res = selectClan(save, id); }
+          else res = buyClanTree(save, id);
+        } else res = { ok: false, reason: 'locked' };
+      }
+      if (res && res.ok) onBuy();
+    };
+  });
+  const close = root.querySelector('#acadclose');
+  if (close) close.onclick = onClose;
+}

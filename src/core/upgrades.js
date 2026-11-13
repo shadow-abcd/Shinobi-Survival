@@ -18,6 +18,8 @@ export function abilityAvailable(world, id) {
   const owned = world.abilities.find((a) => a.id === id);
   if (owned) return owned.rank < MAX_RANK;
   if (world.abilities.length >= ACTIVE_SLOTS) return false;
+  // Tier 2/3 are Academy unlocks (memo C5); without a save every tier is open.
+  if (def.tier >= 2 && world.save && !world.save.arsenal[id]) return false;
   // Tier gating is on ability mastery only, never on player Rank (memo §2.4).
   if (def.tier === 1) return true;
   const parent = world.abilities.find((a) => a.id === def.parent);

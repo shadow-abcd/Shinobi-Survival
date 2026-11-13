@@ -8,6 +8,7 @@ import { STATUS, applyStatus, tickStatuses, statusDamageTakenMult, stacksOf } fr
 import { ENEMY_TYPES, enemyHP, spawnRate, maxOnScreen, spawnPod, updateEnemy } from './enemies.js';
 import { createBoss, updateBoss, BOSS_DEFS } from './boss.js';
 import { rollChoices, applyChoice, PASSIVES } from './upgrades.js';
+import { metaModifiers } from './meta.js';
 
 export const TICK = 1 / 60;
 export const RUN_LENGTH = 1200;        // 20 minutes: four bosses, three world phases
@@ -22,7 +23,8 @@ export class World {
     this.reset(seed);
   }
 
-  reset(seed) {
+  reset(seed, save) {
+    this.save = save || this.save || null;
     this.rng = new RNG(seed);
     this.bus.clear ? this.bus.clear() : (this.bus.map.clear());
     this.t = 0;
@@ -61,6 +63,23 @@ export class World {
       dashCd: 0, dashT: 0, iframe: 0, dashDir: { x: 1, y: 0 },
       hitFlash: 0, invulnFlash: 0, moving: false, kills: 0, regenT: 0,
     };
+    const m = this.save ? metaModifiers(this.save) : {
+      clan: null, maxHp: 150, speedMult: 1, chakraMult: 1, dmgMult: 1, magnetMult: 1,
+      crit: 0.05, ascension: 0, enemyHpMult: 1, enemyCountMult: 1, noSafeZone: false,
+      regen: 0, slow: 0, legacy: false,
+    };
+    this.meta = m;
+    const p0 = this.player;
+    p0.maxHp = m.maxHp; p0.hp = m.maxHp;
+    p0.speedMult = m.speedMult; p0.dmgMult = m.dmgMult; p0.magnetMult = m.magnetMult; p0.crit = m.crit;
+    this.chakraMult = m.chakraMult;
+    this.ascension = m.ascension;
+    this.enemyHpMult = m.enemyHpMult;
+    this.enemyCountMult = m.enemyCountMult;
+    this.noSafeZone = m.noSafeZone;
+    this.clan = m.clan;
+    this.clanRegen = m.regen || 0;
+    this.naraSlow = m.slow || 0;
     this.abilities = [{ id: 'fireball', rank: 1, cd: 0, cdMax: ABILITIES.fireball.cd }];
     this.passives = [];
     this.ultimate = this.ultimate || 'cataclysm';
@@ -124,7 +143,7 @@ export class World {
   get minutes() { return this.t / 60; }
   viewDiag() { return Math.hypot(this.viewW, this.viewH); }
 
-  maxOnScreen() { return maxOnScreen(this.minutes); }
+  maxOnScreen() { return Math.round(maxOnScreen(this.minutes) * (this.enemyCountMult || 1)); }
 
   spawnTable(min) {
     const t = [];
@@ -153,7 +172,7 @@ export class World {
     const def = ENEMY_TYPES[typeId];
     const e = this.enemies.spawn();
     if (!e) return null;
-    const hp = enemyHP(this.minutes) * def.hpMult;
+    const hp = enemyHP(this.minutes) * def.hpMult * (this.enemyHpMult || 1);
     e.type = typeId;
     e.x = x; e.y = y;
     e.vx = 0; e.vy = 0;
@@ -323,7 +342,22 @@ export class World {
 
     let crit = false;
     if (opts.crit !== undefined) crit = opts.crit;
-    else if (!opts.dot && this.rng.chance(p.crit)) crit = true;
+    else if (!opts.dot) {
+      const fireBonus = this.clan === 'uchiha' && opts.element === 'fire' ? 0.10 : 0;
+      if (this.rng.chance(p.crit + fireBonus)) crit = true;
+    }
+
+    // clan traits (memo §3 — mechanical, never raw percentage stats)
+    if (!opts.dot) {
+      if (this.clan === 'uchiha' && this.rng.chance(0.15)) applyStatus(this, e, 'stunned', { stacks: 1, source: 'clan' });
+      if (this.clan === 'hyuga') {
+        const dx = e.x - p.x, dy = e.y - p.y;
+        const d = Math.hypot(dx, dy) || 1;
+        e.x += (dx / d) * 26; e.y += (dy / d) * 26;
+        applyStatus(this, e, 'staggered', { stacks: 1, source: 'clan' });
+      }
+    }
+    if (this.naraSlow && e.naraMarked) dmg *= 1.10;
 
     // step 7 — damage calculation
     dmg *= statusDamageTakenMult(e);
@@ -412,6 +446,9 @@ export class World {
     this.player.kills++;
     this.kills++;
     this.addChakra(isElite ? 10 : 1);
+    if (this.clan === 'uzumaki' && e.hp < e.maxHp * 0.3) {
+      this.player.hp = Math.min(this.player.maxHp, this.player.hp + 2);
+    }
     this.bus.emit('kill', { x: e.x, y: e.y, type: e.type, r: e.r, color: def.color });
   }
 
@@ -463,7 +500,7 @@ export class World {
     }
     this.bossActive = false;
     this.stageIndex++;
-    this.safeT = 12;
+    this.safeT = this.noSafeZone ? 0 : 12;
     this.player.hp = Math.min(this.player.maxHp, this.player.hp + this.player.maxHp * 0.4);
     this.phase = Math.min(3, this.stageIndex + 1);
     this.bus.emit('stage:clear', { stage: this.stageIndex, phase: this.phase });
@@ -504,7 +541,7 @@ export class World {
 
   addChakra(n) {
     const p = this.player;
-    p.chakra = Math.min(100, p.chakra + n);
+    p.chakra = Math.min(100, p.chakra + n * (this.chakraMult || 1));
     if (p.chakra >= 100) {
       if (!p.overcharge) this.bus.emit('chakra:full', {});
       p.overcharge = true;
@@ -547,7 +584,7 @@ export class World {
     const armed = p.overcharge;
     this._empowerDmg = armed ? 1.5 : 1;
     this._empowerRadius = armed ? 1.3 : 1;
-    this._empowerStacks = armed ? 1 : 0;
+    this._empowerStacks = armed ? (this.clan === 'uzumaki' ? 2 : 1) : 0;
     if (armed) p.overcharge = false;
     let ok = false;
     try { ok = this.castJutsu(ab); } catch (err) { ok = false; }
