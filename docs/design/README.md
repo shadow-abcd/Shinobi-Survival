@@ -88,9 +88,10 @@ Two minutes. It prevents the drift that cost six review cycles.
 
 ---
 
-## What's still missing (deliberately deferred to v1.1)
+## What's still open (not closed by this package)
 
-None. Every item on the "still open" list from the Decision Memo and Addendum has been resolved in this package:
+- **IP / terminology rename — OPEN.** This package still uses *Naruto*-derived terms (Uchiha, Nara, Hyuga, Uzumaki, Chakra, Jutsu, Genin/Chunin/Jonin/Kage, Susanoo, etc.) flagged in the first review. No rename has been applied. Do not ship commercially under these terms without a rename pass or licence. See AUDIT below.
+- Everything else on the old "still open" list is resolved in this package:
 
 - Boss specification → `06_BOSS_SPECIFICATION.md`
 - Slot counts → 4 active / 6 passive / 1 ultimate (in `08_PROGRESSION_AND_META.md`)
@@ -100,6 +101,6 @@ None. Every item on the "still open" list from the Decision Memo and Addendum ha
 - XP curve → `08_PROGRESSION_AND_META.md` § XP Curve
 - Boss HP table → `06_BOSS_SPECIFICATION.md` § HP Formula
 - Targeting mode per ability → `05_ABILITY_STARTER_SET.md`
-- Modifier-stack order → `08_PROGRESSION_AND_META.md` § Modifier Stack
+- Modifier-stack order → `07_TECHNICAL_SPEC.md` §9 Modifier Stack (not 08 — 08 has no Modifier Stack section)
 
 v1.1 will be reserved for tuning values after playtesting, not for missing systems.
