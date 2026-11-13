@@ -71,6 +71,8 @@ export function defaultSave() {
     legacy: { uchiha: false, nara: false, hyuga: false, uzumaki: false },
     ascension: 0,
     bestTime: 0,
+    // FIX Batch 6 (Banish purchases): +1 Banish charge per purchase, max 2 bought, 50 Seals each. In-run charges = 1 + this.
+    banish: 0,
   };
 }
 
@@ -141,6 +143,18 @@ export function buyClanTree(save, clan) {
   // Completing a clan tree contributes its Legacy trait to every clan (memo C1/C2).
   if (save.clanTree[clan] >= CLAN_TREE.ranks) save.legacy[clan] = true;
   return { ok: true, cost };
+}
+
+// FIX Batch 6: Banish purchase — 50 Seals, max 2 bought (so max in-run charges = 1 free + 2 = 3).
+export const BANISH_COST = 50;
+export const BANISH_MAX_BOUGHT = 2;
+export function buyBanish(save) {
+  const bought = save.banish || 0;
+  if (bought >= BANISH_MAX_BOUGHT) return { ok: false, reason: 'maxed' };
+  if (save.seals < BANISH_COST) return { ok: false, reason: 'seals', cost: BANISH_COST };
+  save.seals -= BANISH_COST;
+  save.banish = bought + 1;
+  return { ok: true, cost: BANISH_COST };
 }
 
 export function selectClan(save, clan) {

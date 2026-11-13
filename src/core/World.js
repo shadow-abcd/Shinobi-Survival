@@ -7,7 +7,7 @@ import { ABILITIES, RANK_MULT, FUSIONS, fusionKey, ULTIMATE_COST, ELEMENTS } fro
 import { STATUS, applyStatus, tickStatuses, statusDamageTakenMult, stacksOf } from './statuses.js';
 import { ENEMY_TYPES, enemyHP, spawnRate, maxOnScreen, spawnPod, updateEnemy } from './enemies.js';
 import { createBoss, updateBoss, BOSS_DEFS } from './boss.js';
-import { rollChoices, applyChoice, PASSIVES } from './upgrades.js';
+import { rollChoices, applyChoice, PASSIVES, banishChoice } from './upgrades.js';
 import { metaModifiers } from './meta.js';
 
 export const TICK = 1 / 60;
@@ -65,6 +65,8 @@ export class World {
       level: 1, xp: 0, xpNeed: 15, chakra: 0, overcharge: false,
       // FIX Batch 5 (Rank): Genin 5 passives / 1 dash, Chunin 6 passives, Jonin 2 dashes, Kage Flow State.
       rank: 'genin', maxPassives: 5, dashMax: 1, dashCharges: 1, flowUnlocked: false, flowUsed: false, flowT: 0,
+      // FIX Batch 6 (Banish): 1 free per run + Academy purchases (save.banish 0-2), max 3. Set in reset() from save.
+      banishCharges: 1,
       dashCd: 0, dashT: 0, iframe: 0, dashDir: { x: 1, y: 0 },
       hitFlash: 0, invulnFlash: 0, moving: false, kills: 0, regenT: 0,
     };
@@ -74,6 +76,9 @@ export class World {
       regen: 0, slow: 0, legacy: false,
     };
     this.meta = m;
+    // FIX Batch 6: Banish pool starts empty each run. Charges = 1 free + Academy-bought (save.banish), capped at 3.
+    this.banished = new Set();
+    this.player.banishCharges = Math.min(3, 1 + (this.save?.banish || 0));
     const p0 = this.player;
     p0.maxHp = m.maxHp; p0.hp = m.maxHp;
     p0.speedMult = m.speedMult; p0.dmgMult = m.dmgMult; p0.magnetMult = m.magnetMult; p0.crit = m.crit;
@@ -964,8 +969,16 @@ export class World {
       this.pendingLevels++;
       leveled = true;
     }
+    // FIX Batch 6 (Post-cap): at level 50, XP still fills. Each full bar triggers a post-cap menu (heal / reroll / +1 banish),
+    // not a normal level-up. rollChoices() returns post-cap choices when level >= 50.
+    let postCap = false;
+    if (p.level >= 50 && p.xp >= p.xpNeed) {
+      p.xp -= p.xpNeed;
+      postCap = true;
+    }
     if (p.level >= 50) p.xp = Math.min(p.xp, p.xpNeed);
-    if (leveled && this.state === 'playing') {
+    if ((leveled || postCap) && this.state === 'playing') {
+      if (postCap) this.pendingLevels++;
       this.state = 'levelup';
       this.pendingChoices = rollChoices(this, 3);
       this.bus.emit('levelup', { level: p.level, choices: this.pendingChoices });
@@ -984,6 +997,15 @@ export class World {
       this.state = 'playing';
       this.bus.emit('levelup:done', {});
     }
+  }
+
+  // FIX Batch 6 (Banish): remove one offered card from the pool for the rest of the run. Costs a Banish charge, NOT the pick.
+  // After banishing, the menu re-rolls to 3 fresh choices (the banished id is filtered out by rollChoices).
+  banish(choice) {
+    if (!banishChoice(this, choice)) return false;
+    this.pendingChoices = rollChoices(this, 3);
+    this.bus.emit('levelup', { level: this.player.level, choices: this.pendingChoices });
+    return true;
   }
 
   // ---------- one logic tick ----------
