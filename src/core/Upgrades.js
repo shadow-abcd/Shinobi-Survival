@@ -34,30 +34,6 @@ export function nextBreakthrough(world) {
   return { kind: 'breakthrough', id: 'breakthrough-' + next, rank: next, w: 1, name: def.name, element: 'rank', tag: 'Breakthrough', desc: def.desc };
 }
 
-// FIX Batch 6 (Banish + Post-cap): design C4 + §8.3.
-// Banish: 1 free per run + up to 2 bought in Academy (50 Seals each), max 3 per run.
-// Banish removes ONE offered card from the pool for the rest of the run — it costs a Banish charge, NOT the pick.
-// Post-cap (level 50): XP still fills, but the menu is heal 25% / reroll jutsu / +1 banish charge.
-export const BANISH_MAX = 3;
-export const BANISH_COST = 50;
-export function banishChoice(world, choice) {
-  if (!choice || (choice.kind !== 'ability' && choice.kind !== 'passive')) return false;
-  if ((world.player?.banishCharges || 0) <= 0) return false;
-  if (!world.banished) world.banished = new Set();
-  if (world.banished.has(choice.id)) return false;
-  world.banished.add(choice.id);
-  world.player.banishCharges--;
-  if (world.bus) world.bus.emit('banish', { id: choice.id, kind: choice.kind, charges: world.player.banishCharges });
-  return true;
-}
-export function rollPostCapChoices(world) {
-  return [
-    { kind: 'postcap-heal', id: 'postcap-heal', w: 1, name: 'Second Wind', element: 'stat', tag: 'Post-cap', desc: 'Restore 25% of your health.' },
-    { kind: 'postcap-reroll', id: 'postcap-reroll', w: 1, name: 'Reroll Jutsu', element: 'stat', tag: 'Post-cap', desc: 'Swap your lowest-rank jutsu for a new random jutsu at Rank 1. If none available, heal 25% instead.' },
-    { kind: 'postcap-banish', id: 'postcap-banish', w: 1, name: '+1 Banish', element: 'stat', tag: 'Post-cap', desc: 'Gain +1 Banish charge (max 3). If already at max, heal 25% instead.' },
-  ];
-}
-
 export function abilityAvailable(world, id) {
   const def = ABILITIES[id];
   const owned = world.abilities.find((a) => a.id === id);
@@ -77,8 +53,6 @@ export function passiveCount(world) {
 }
 
 export function rollChoices(world, n = 3) {
-  // FIX Batch 6: at level cap 50, the menu is post-cap offers, not normal picks.
-  if ((world.player?.level || 1) >= 50) return rollPostCapChoices(world);
   const pool = [];
   // FIX Batch 4 (clan weighting): design p19 — clan-signature elements get 2x weight in the level-up roll.
   // Uchiha=Fire, Nara=Earth, Hyuga=Wind, Uzumaki=Water. Lightning has no clan signature — available evenly.
@@ -87,7 +61,6 @@ export function rollChoices(world, n = 3) {
   const signature = CLAN_SIGNATURE[world.clan] || null;
   for (const id in ABILITIES) {
     const def = ABILITIES[id];
-    if (world.banished && world.banished.has(id)) continue;
     if (abilityAvailable(world, id)) {
       const owned = world.abilities.find((a) => a.id === id);
       const tierW = def.tier === 1 ? 2.6 : def.tier === 2 ? 1.9 : 1.1;
@@ -104,7 +77,6 @@ export function rollChoices(world, n = 3) {
   const maxPassives = passiveSlotsForRank(world.player?.rank || 'genin');
   if (world.passives.length < maxPassives) {
     for (const id in PASSIVES) {
-      if (world.banished && world.banished.has(id)) continue;
       const owned = world.passives.find((p) => p.id === id);
       if (owned && owned.rank >= PASSIVES[id].max) continue;
       pool.push({
@@ -150,47 +122,6 @@ export function rollChoices(world, n = 3) {
 }
 
 export function applyChoice(world, choice) {
-  if (choice.kind === 'postcap-heal') {
-    const p = world.player;
-    p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25);
-    return;
-  }
-  if (choice.kind === 'postcap-banish') {
-    const p = world.player;
-    if ((p.banishCharges || 0) >= BANISH_MAX) { p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25); return; }
-    p.banishCharges = Math.min(BANISH_MAX, (p.banishCharges || 0) + 1);
-    return;
-  }
-  if (choice.kind === 'postcap-reroll') {
-    // Swap lowest-rank owned jutsu for a new random jutsu at Rank 1. Fallback: heal 25%.
-    const p = world.player;
-    if (!world.abilities.length) { p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25); return; }
-    const sorted = [...world.abilities].sort((a, b) => a.rank - b.rank);
-    const victim = sorted[0];
-    const idx = world.abilities.findIndex((a) => a.id === victim.id);
-    if (idx >= 0) world.abilities.splice(idx, 1);
-    const candidates = [];
-    for (const id in ABILITIES) {
-      if (world.abilities.some((a) => a.id === id)) continue;
-      if (world.banished && world.banished.has(id)) continue;
-      if (id === victim.id) continue;
-      if (abilityAvailable(world, id)) candidates.push(id);
-    }
-    if (!candidates.length) {
-      // No replacement available — put the victim back and heal instead.
-      world.abilities.splice(idx, 0, victim);
-      p.hp = Math.min(p.maxHp, p.hp + p.maxHp * 0.25);
-      return;
-    }
-    const pickId = candidates[Math.floor(world.rng.next() * candidates.length)];
-    const fresh = { id: pickId, rank: 1, cd: 0 };
-    world.abilities.push(fresh);
-    world.bus.emit('ability:gained', fresh);
-    const def = ABILITIES[pickId];
-    fresh.cd = Math.max(0.25, def.cd * (1 - Math.min(0.7, world.player.cdr)));
-    fresh.cdMax = fresh.cd;
-    return;
-  }
   if (choice.kind === 'breakthrough') {
     // Promotion itself lives in world.promote() so rank, slots, dash and Flow stay in one place.
     if (typeof world.promote === 'function') world.promote(choice.rank);
