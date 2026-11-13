@@ -1,7 +1,7 @@
 // The Academy: Seals spending between runs — global stats, arsenal unlocks, clan trees.
 import {
-  CLANS, GLOBAL_UPGRADES, CLAN_TREE, ARSENAL_COST, BANISH_COST, BANISH_MAX_BOUGHT,
-  costOf, clanTreeCost, clanUnlocked, buyGlobal, buyArsenal, buyClanTree, buyBanish,
+  CLANS, GLOBAL_UPGRADES, CLAN_TREE, ARSENAL_COST, ULTIMATES, ULTIMATE_COST, BANISH_COST, BANISH_MAX_BOUGHT,
+  costOf, clanTreeCost, clanUnlocked, buyGlobal, buyArsenal, buyClanTree, buyBanish, buyUltimate,
   selectClan, perfectShinobi,
 } from '../core/meta.js';
 import { ABILITIES, ELEMENTS } from '../core/abilities.js';
@@ -31,6 +31,15 @@ export function academyHTML(save) {
     </div>`;
   const globalWithBanish = global + banishRow;
 
+  // FIX Batch 7: Ultimates (200 Seals each, design §6) live in the Arsenal tab below T2/T3 rows. Cataclysm is free.
+  const ultimates = ULTIMATES.map((u) => {
+    const owned = !!(save.ultimates && save.ultimates[u.id]);
+    return `<div class="acad-row ${owned ? 'owned' : ''}" data-kind="ultimate" data-id="${u.id}">
+      <div class="ar-name">${u.name}<span class="ar-rank">Ultimate</span></div>
+      <div class="ar-desc">${u.desc}</div>
+      <div class="ar-cost">${owned ? 'unlocked' : ULTIMATE_COST + ' seals'}</div>
+    </div>`;
+  }).join('');
   const arsenal = Object.values(ABILITIES).filter((a) => a.tier >= 2).map((a) => {
     const owned = !!save.arsenal[a.id];
     const cost = ARSENAL_COST[a.tier];
@@ -68,7 +77,7 @@ export function academyHTML(save) {
       <div class="tab" data-tab="clans">Clans</div>
     </div>
     <div class="acad-body" data-panel="global">${globalWithBanish}</div>
-    <div class="acad-body hidden" data-panel="arsenal">${arsenal}</div>
+    <div class="acad-body hidden" data-panel="arsenal">${arsenal}${ultimates}</div>
     <div class="acad-body hidden" data-panel="clans">${clans}</div>
     <div class="acad-foot">
       <div id="acadmsg" style="min-height:18px;font-size:12.5px;color:#ffb0b0;text-align:center;"></div>
@@ -95,6 +104,7 @@ export function bindAcademy(root, save, onBuy, onClose) {
       if (kind === 'global') res = buyGlobal(save, id);
       else if (kind === 'banish') res = buyBanish(save);
       else if (kind === 'arsenal') res = buyArsenal(save, id, parseInt(row.dataset.tier, 10));
+      else if (kind === 'ultimate') res = buyUltimate(save, id);
       else if (kind === 'clan') {
         if (clanUnlocked(save, id)) {
           if (save.clan !== id) { res = selectClan(save, id); }
