@@ -25,8 +25,10 @@ export const ENEMY_TYPES = {
 };
 
 export function enemyHP(minutes) { return 20 * Math.pow(1.085, minutes); }
-export function spawnRate(minutes) { return Math.min(16, 2.0 + 1.05 * minutes); }
-export function maxOnScreen(minutes) { return Math.min(900, 130 + 45 * minutes); }
+// FIX Batch 3 (spawn formulas): design is SpawnRate = min(12, 1.5 + 0.9*min), MaxOnScreen = min(900, 120 + 40*min).
+// Code was min(16, 2.0 + 1.05*min) / min(900, 130 + 45*min) — at 10 min: 12.5/s vs 10.5/s (+19%), at 20 min: 16/s cap vs 12/s cap (+33%).
+export function spawnRate(minutes) { return Math.min(12, 1.5 + 0.9 * minutes); }
+export function maxOnScreen(minutes) { return Math.min(900, 120 + 40 * minutes); }
 export function podSize(minutes) { return 3 + Math.min(7, Math.floor(minutes / 4)); }
 
 // SpawnRate(t) is enemies per second. Pairs and small pods add visual variety without
@@ -38,7 +40,9 @@ export function spawnPod(world) {
   const dist = world.rng.range(600, 780);
   const cx = world.player.x + Math.cos(ang) * dist;
   const cy = world.player.y + Math.sin(ang) * dist;
-  const n = world.rng.chance(0.3) ? 2 : 1;
+  // FIX Batch 3: spawnPod spawns exactly 1 enemy per call, so SpawnRate(t) IS enemies/sec.
+  // Old code spawned 1-2 (30% chance of 2), so the real rate was 1.15x the formula — the curve never matched the design.
+  const n = 1;
   for (let i = 0; i < n; i++) {
     if (world.enemies.count >= world.maxOnScreen()) break;
     const t = world.rng.weighted(types);

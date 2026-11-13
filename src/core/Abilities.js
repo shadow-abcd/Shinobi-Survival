@@ -146,7 +146,8 @@ export const ABILITIES = {
 // Each fusion now carries its own element. world.js fireFusion() uses
 // f.element instead of hard-coded 'fire'.
 export const FUSIONS = {
-  'fire+wind': { id: 'firestorm', name: 'Firestorm', r: 130, coeff: 1.8, status: 'burning', stacks: 2, color: '#ffd27a', element: 'fire' },
+  // FIX Batch 3 (fusion matrix): design says Firestorm primes Aerated, not Burning. Fire+Wind -> Aerated.
+  'fire+wind': { id: 'firestorm', name: 'Firestorm', r: 130, coeff: 1.8, status: 'aerated', stacks: 2, color: '#ffd27a', element: 'fire' },
   'fire+water': { id: 'scald', name: 'Scald Veil', r: 120, coeff: 1.5, status: 'drenched', stacks: 1, color: '#ffb9a0', element: 'water' },
   'fire+earth': { id: 'magma', name: 'Magma Well', r: 150, coeff: 1.6, status: 'burning', stacks: 2, color: '#ff8a4a', element: 'fire' },
   'fire+lightning': { id: 'plasma', name: 'Plasma Lance', r: 110, coeff: 2.2, status: 'stunned', stacks: 1, color: '#ffe98a', element: 'lightning' },

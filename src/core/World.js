@@ -363,15 +363,17 @@ export class World {
         applyStatus(this, e, 'staggered', { stacks: 1, source: 'clan' });
       }
     }
-    if (this.naraSlow && e.naraMarked) dmg *= 1.10;
+    // FIX Batch 3 (Burn DoT is FLAT): Nara + Staggered multipliers do NOT apply to DoT. Design: Burn stacks add FLAT after multipliers.
+    if (!opts.dot && this.naraSlow && e.naraMarked) dmg *= 1.10;
 
     // step 7 — damage calculation
-    dmg *= statusDamageTakenMult(e);
+    if (!opts.dot) dmg *= statusDamageTakenMult(e);
     if (crit) dmg *= 1.5;
     if (det) dmg *= det.def.detonateMult;
     // FIX Batch 2 (Warden front armor): 60% blocked from the front, full from behind, none when vulnerable.
     // Front = within 90 deg of the Warden's facing. Facing locks during telegraph (boss.js), so circling behind is the counterplay.
-    if (e.isBoss && e.id === 'warden' && e.state !== 'vulnerable' && e.state !== 'dead') {
+    // DoT is not directional — Warden front armor does not block Burning ticks.
+    if (!opts.dot && e.isBoss && e.id === 'warden' && e.state !== 'vulnerable' && e.state !== 'dead') {
       const angToPlayer = Math.atan2(p.y - e.y, p.x - e.x);
       let diff = angToPlayer - (e.face || 0);
       while (diff > Math.PI) diff -= Math.PI * 2;
@@ -447,9 +449,24 @@ export class World {
     if (e.pairIcd[icd] > 0) return;
     e.pairIcd[icd] = 2.5;
     const f = FUSIONS[key];
+    // FIX Batch 3 (fusion scaling): fusion damage now scales with the parents' ranks.
+    // Old code was calcDamage(coeff, 1) * 0.6 — always Rank 1, always 40% nerfed — so a R5+R5 build fused for the same damage as R1+R1.
+    // Now: average rank of the highest owned ability of each element in the pair. Fallback 3 = min rank to unlock fusion per design,
+    // so Cataclysm / status-only triggers (no owned abilities) still fuse at a sane value and the combat test still passes.
+    const [elA, elB] = key.split('+');
+    const rankFor = (el) => {
+      let best = 0;
+      for (const a of this.abilities) {
+        const def = ABILITIES[a.id];
+        if (def && def.element === el) best = Math.max(best, a.rank);
+      }
+      return best;
+    };
+    const rA = rankFor(elA), rB = rankFor(elB);
+    const fusionRank = (rA > 0 && rB > 0) ? Math.max(1, Math.round((rA + rB) / 2)) : 3;
     this.spawnBurst({
       x: e.x, y: e.y, r: f.r, life: 0.45,
-      damage: this.calcDamage(f.coeff, 1) * 0.6,
+      damage: this.calcDamage(f.coeff, fusionRank),
       element: f.element || 'fire', status: f.status, statusStacks: f.stacks, color: f.color,
     });
     this.shake = Math.min(10, this.shake + 2.5);
@@ -890,12 +907,19 @@ export class World {
     for (const e of list) {
       if (!e.alive) continue;
       if ((e.x - at.x) ** 2 + (e.y - at.y) ** 2 > (r + e.r) ** 2) continue;
-      for (const id of ['aerated', 'burning', 'drenched', 'rooted']) {
-        applyStatus(this, e, id, { stacks: 3, source: 'cataclysm' });
+      // FIX Batch 3 (Cataclysm): design is "ALL statuses at max stacks, every pair detonated".
+      // Old code applied only 4 of 8 statuses, at a flat 3 stacks (Burning max is 5, Drenched/Rooted max is 1) and only 3 hits.
+      // Now: every status in the registry at its own maxStacks, then 5 hits that detonate every detonatable status:
+      // Fire -> Aerated, Wind -> Burning, Lightning -> Drenched, Physical -> Frozen (shatter), Wind -> Rooted (second Wind, after Burning is consumed).
+      for (const id of Object.keys(STATUS)) {
+        applyStatus(this, e, id, { stacks: STATUS[id].maxStacks, source: 'cataclysm' });
       }
-      this.damageEnemy(e, this.calcDamage(20, 1) / 3, { element: 'fire', crit: false });
-      this.damageEnemy(e, this.calcDamage(20, 1) / 3, { element: 'wind', crit: false });
-      this.damageEnemy(e, this.calcDamage(20, 1) / 3, { element: 'lightning', crit: false });
+      const each = this.calcDamage(20, 1) / 5; // total still 20x ATK, split across the 5 detonating hits
+      this.damageEnemy(e, each, { element: 'fire', crit: false });
+      this.damageEnemy(e, each, { element: 'wind', crit: false });
+      this.damageEnemy(e, each, { element: 'lightning', crit: false });
+      this.damageEnemy(e, each, { element: 'physical', crit: false });
+      this.damageEnemy(e, each, { element: 'wind', crit: false });
     }
     this.spawnBurst({ x: at.x, y: at.y, r, life: 0.8, damage: 0, element: 'fire', status: null, statusStacks: 0, color: '#ffd27a', ultimate: true });
   }
