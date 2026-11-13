@@ -91,8 +91,19 @@ export class UI {
     if (ab && onAcademy) ab.onclick = onAcademy;
   }
 
-  showLevelUp(level, choices, onPick) {
+  // FIX Batch 5: showLevelUp now takes an optional rank (4th arg) and renders Breakthrough cards distinctly.
+  // Old signature showLevelUp(level, choices, onPick) still works — rank is optional.
+  showLevelUp(level, choices, onPick, rank) {
+    const rankLabel = rank ? ` · ${rank.charAt(0).toUpperCase() + rank.slice(1)}` : '';
     const cards = choices.map((c, i) => {
+      if (c.kind === 'breakthrough') {
+        return `<div class="card breakthrough" data-i="${i}" style="border-color:#ffd27a;background:linear-gradient(180deg,rgba(255,210,122,0.16),rgba(255,122,47,0.08))">
+        <div class="k">Breakthrough · ${c.tag}</div>
+        <div class="n">${c.name}</div>
+        <div class="d">${c.desc}</div>
+        <div class="tag">RANK</div>
+      </div>`;
+      }
       const cls = c.element === 'stat' ? 'stat' : c.element;
       return `<div class="card ${cls}" data-i="${i}">
         <div class="k">${c.kind === 'ability' ? 'Jutsu' : 'Passive'} · ${c.tag}</div>
@@ -103,7 +114,7 @@ export class UI {
     }).join('');
     this.showOverlay(`
       <div class="panel">
-        <div class="title" style="font-size:clamp(22px,4vw,36px)">Level ${level}</div>
+        <div class="title" style="font-size:clamp(22px,4vw,36px)">Level ${level}${rankLabel}</div>
         <div class="sub">Choose one</div>
         <div class="cards">${cards}</div>
         <div class="hint">1 · 2 · 3 to pick</div>

@@ -88,4 +88,7 @@ export class Audio {
   swap() { this.noiseHit(0.18, 0.16, 1800, 1.8); this.tone(600, 0.16, 'sine', 0.10, 300); }
   enrage() { this.tone(65, 0.6, 'sawtooth', 0.22, 40); this.noiseHit(0.5, 0.20, 130, 0.6); }
   counter() { this.tone(900, 0.10, 'square', 0.12, -500); this.noiseHit(0.10, 0.14, 2200, 1.6); }
+  // FIX Batch 5: Breakthrough fanfare + Flow State shimmer.
+  breakthrough() { this.tone(520, 0.14, 'triangle', 0.16, 180); setTimeout(() => this.tone(780, 0.22, 'triangle', 0.14, 220), 120); }
+  flow() { this.noiseHit(0.30, 0.14, 3200, 2.0); this.tone(880, 0.30, 'sine', 0.10, 400); }
 }
