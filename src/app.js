@@ -343,3 +343,39 @@ window.addEventListener('keydown', (e)=>{
 });
 // Step 4: restore settings on load
 try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); window.__muted = !!s.muted; window.__shake = s.shake!==false; window.__colorblind = !!s.colorblind; if(window.__colorblind) document.body.classList.add('colorblind'); }catch(_){}
+
+// Batch 10: Joystick — Magic Survival feel. Left thumb = move, spells auto-cast + auto-aim.
+// Touch on left half of screen = joystick. Drag to move, release to stop.
+(function(){
+  let joyId = null, joyX = 0, joyY = 0, joyStartX = 0, joyStartY = 0;
+  const el = document.getElementById('game') || document.body;
+  el.addEventListener('touchstart', (e)=>{
+    for (const touch of e.changedTouches){
+      if (touch.clientX < window.innerWidth * 0.5 && joyId === null){
+        joyId = touch.identifier; joyStartX = touch.clientX; joyStartY = touch.clientY; joyX = 0; joyY = 0;
+      }
+    }
+  }, {passive: true});
+  el.addEventListener('touchmove', (e)=>{
+    for (const touch of e.changedTouches){
+      if (touch.identifier === joyId){
+        const dx = touch.clientX - joyStartX, dy = touch.clientY - joyStartY;
+        const d = Math.hypot(dx, dy) || 1;
+        const max = 60;
+        const cl = Math.min(d, max);
+        joyX = (dx/d) * (cl/max); joyY = (dy/d) * (cl/max);
+        // Feed into world input if world is global
+        if (window.world) { window.world.input.x = joyX; window.world.input.y = joyY; }
+        if (window.gameWorld) { window.gameWorld.input.x = joyX; window.gameWorld.input.y = joyY; }
+      }
+    }
+  }, {passive: true});
+  const endJoy = (e)=>{
+    for (const touch of e.changedTouches){
+      if (touch.identifier === joyId){ joyId = null; joyX = 0; joyY = 0; if (window.world) { window.world.input.x = 0; window.world.input.y = 0; } }
+    }
+  };
+  el.addEventListener('touchend', endJoy, {passive: true});
+  el.addEventListener('touchcancel', endJoy, {passive: true});
+  console.log('Batch 10: Joystick ready — left thumb to move, spells auto-cast');
+})();

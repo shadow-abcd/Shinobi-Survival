@@ -9,7 +9,7 @@ export function play(seed, { verbose = false, save = null } = {}) {
   const w = new World(seed);
   if (save) w.reset(seed, save);
   const dt = TICK;
-  const maxTicks = 1300 * 60;
+  const maxTicks = 1800 * 60; // Batch 10: 30 min sim // Batch 10: 30 min sim
   let peak = 0, nan = false, minHp = 100;
   const fights = [];
   let banished = 0, promoted = 0;

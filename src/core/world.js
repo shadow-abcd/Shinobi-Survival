@@ -11,8 +11,8 @@ import { rollChoices, applyChoice, PASSIVES, banishChoice } from './upgrades.js'
 import { metaModifiers } from './meta.js';
 
 export const TICK = 1 / 60;
-export const RUN_LENGTH = 1200;        // 20 minutes: four bosses, three world phases
-const BOSS_TIMES = [300, 600, 900, 1200];
+export const RUN_LENGTH = 1800; // Batch 10: 30 min like Magic Survival        // 20 minutes: four bosses, three world phases
+const BOSS_TIMES = [300, 600, 900, 1200, 1500, 1800]; // Batch 10: 6 bosses, 30 min
 
 // Maps Batch: 3 Maps — forest / desert / frost. Same engine, different mix + palette.
 export const MAPS = {
@@ -61,6 +61,8 @@ export class World {
     this.mapId = (this.save?.map || 'forest');
     this.map = MAPS[this.mapId] || MAPS.forest;
     this.bossHpMult = 1;
+    // Batch 10: late bosses (1500/1800) are harder — same mechanics, scaled HP
+    if (this.t >= 1500) this.bossHpMult = 1.8; else if (this.t >= 1200) this.bossHpMult = 1.5;
     this.choiceBoss = null;
     this.extracted = false;
     this.bossKilledAt = 0;

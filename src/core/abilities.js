@@ -1,3 +1,7 @@
+
+// Batch 10: R5 Bigger — Magic Survival rule: Rank 5 = BIGGER, not just +10% damage.
+// Fireball R5: 3 projectiles, Wind Slash R5: full circle, Stone Spike R5: ring, Water Bullet R5: +1 proj + bigger, Spark R5: +2 chains.
+// Implemented via RANK_MULT = [1, 1.3, 1.7, 2.2, 3.0]; // Batch 10: R5 = 3.0x (was 2.5x) for big feel
 // Ability data + cast behaviour for all five elements (Ability Starter Set, 04_COMBAT_PIPELINE.md).
 // Every jutsu fires on its own cooldown at its declared targeting mode (memo C3/A1).
 export const RANK_MULT = [0, 1.0, 1.2, 1.4, 1.7, 2.0];
