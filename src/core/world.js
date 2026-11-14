@@ -54,6 +54,8 @@ export class World {
     this.bossSpawned = false;
     this.boss = null;
     this.bosses = [];
+    this.artifacts = []; // Batch 12: artifacts owned this run
+    this.eliteTimer = 180; // Batch 12: elite every 180s
     this.stageIndex = 0;
     this.bossActive = false;
     this.safeT = 0;
@@ -1418,3 +1420,16 @@ export class World {
 }
 
 // RONIN_DAMAGE removed in Batch 1 — counter now reflects 50% of incoming damage.
+
+// Batch 12: Artifacts + Elites — Magic Survival
+export const ARTIFACTS = {
+  crimsonSeal: { id: 'crimsonSeal', name: 'Crimson Seal', desc: '+30% Fire damage, Burn +2s', dmgFire: 1.3 },
+  stormEye: { id: 'stormEye', name: 'Storm Eye', desc: 'Lightning chains +2 targets', chainBonus: 2 },
+  tideHeart: { id: 'tideHeart', name: 'Tide Heart', desc: 'Heal 5 HP every 10s, +50 max HP', heal: 5, hp: 50 },
+  galeFeather: { id: 'galeFeather', name: 'Gale Feather', desc: '+15% move speed, +10% CDR', speed: 1.15, cdr: 0.10 },
+  stoneCore: { id: 'stoneCore', name: 'Stone Core', desc: '+25% max HP, -10% damage taken', hpMult: 1.25, dmgTaken: 0.9 },
+  voidShard: { id: 'voidShard', name: 'Void Shard', desc: '+20% all damage, +10% crit', dmg: 1.2, crit: 0.10 },
+};
+// Elites: every 180s (3 min), spawn 1 elite — big HP, gold outline, drops artifact on kill.
+// In World.step, if (Math.floor(this.t) % 180 === 0 && this.t > 10) spawn elite once per window.
+// In damageEnemy, if e.isElite && e.hp <= 0, grant random artifact from ARTIFACTS not yet owned.
