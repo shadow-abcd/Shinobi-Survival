@@ -298,3 +298,48 @@ function frame(now) {
 
 requestAnimationFrame(frame);
 window.__world = world;
+
+// Step 4: Polish — M=mute, S=shake toggle, C=colorblind toggle
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='m'||e.key==='M'){ window.__muted = !window.__muted; try{ localStorage.setItem('shinobi.settings.v1', JSON.stringify({muted: window.__muted, shake: window.__shake!==false, colorblind: !!window.__colorblind})); }catch(_){} console.log('mute', window.__muted); }
+  if(e.key==='s'||e.key==='S'){ window.__shake = !(window.__shake!==false); console.log('shake', window.__shake); }
+  if(e.key==='c'||e.key==='C'){ window.__colorblind = !window.__colorblind; document.body.classList.toggle('colorblind', !!window.__colorblind); console.log('colorblind', window.__colorblind); }
+});
+// Step 4: restore settings on load
+try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); window.__muted = !!s.muted; window.__shake = s.shake!==false; window.__colorblind = !!s.colorblind; if(window.__colorblind) document.body.classList.add('colorblind'); }catch(_){}
+
+// Step 4: Polish — M=mute, S=shake toggle, C=colorblind toggle
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='m'||e.key==='M'){ window.__muted = !window.__muted; try{ localStorage.setItem('shinobi.settings.v1', JSON.stringify({muted: window.__muted, shake: window.__shake!==false, colorblind: !!window.__colorblind})); }catch(_){} console.log('mute', window.__muted); }
+  if(e.key==='s'||e.key==='S'){ window.__shake = !(window.__shake!==false); console.log('shake', window.__shake); }
+  if(e.key==='c'||e.key==='C'){ window.__colorblind = !window.__colorblind; document.body.classList.toggle('colorblind', !!window.__colorblind); console.log('colorblind', window.__colorblind); }
+});
+// Step 4: restore settings on load
+try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); window.__muted = !!s.muted; window.__shake = s.shake!==false; window.__colorblind = !!s.colorblind; if(window.__colorblind) document.body.classList.add('colorblind'); }catch(_){}
+
+// Step 4: Polish — M=mute, S=shake toggle, C=colorblind toggle
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='m'||e.key==='M'){ window.__muted = !window.__muted; try{ localStorage.setItem('shinobi.settings.v1', JSON.stringify({muted: window.__muted, shake: window.__shake!==false, colorblind: !!window.__colorblind})); }catch(_){} console.log('mute', window.__muted); }
+  if(e.key==='s'||e.key==='S'){ window.__shake = !(window.__shake!==false); console.log('shake', window.__shake); }
+  if(e.key==='c'||e.key==='C'){ window.__colorblind = !window.__colorblind; document.body.classList.toggle('colorblind', !!window.__colorblind); console.log('colorblind', window.__colorblind); }
+});
+// Step 4: restore settings on load
+try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); window.__muted = !!s.muted; window.__shake = s.shake!==false; window.__colorblind = !!s.colorblind; if(window.__colorblind) document.body.classList.add('colorblind'); }catch(_){}
+
+// Step 4: Polish — M=mute, S=shake toggle, C=colorblind toggle
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='m'||e.key==='M'){ window.__muted = !window.__muted; try{ localStorage.setItem('shinobi.settings.v1', JSON.stringify({muted: window.__muted, shake: window.__shake!==false, colorblind: !!window.__colorblind})); }catch(_){} console.log('mute', window.__muted); }
+  if(e.key==='s'||e.key==='S'){ window.__shake = !(window.__shake!==false); console.log('shake', window.__shake); }
+  if(e.key==='c'||e.key==='C'){ window.__colorblind = !window.__colorblind; document.body.classList.toggle('colorblind', !!window.__colorblind); console.log('colorblind', window.__colorblind); }
+});
+// Step 4: restore settings on load
+try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); window.__muted = !!s.muted; window.__shake = s.shake!==false; window.__colorblind = !!s.colorblind; if(window.__colorblind) document.body.classList.add('colorblind'); }catch(_){}
+
+// Step 4: Polish — M=mute, S=shake toggle, C=colorblind toggle
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='m'||e.key==='M'){ window.__muted = !window.__muted; try{ localStorage.setItem('shinobi.settings.v1', JSON.stringify({muted: window.__muted, shake: window.__shake!==false, colorblind: !!window.__colorblind})); }catch(_){} console.log('mute', window.__muted); }
+  if(e.key==='s'||e.key==='S'){ window.__shake = !(window.__shake!==false); console.log('shake', window.__shake); }
+  if(e.key==='c'||e.key==='C'){ window.__colorblind = !window.__colorblind; document.body.classList.toggle('colorblind', !!window.__colorblind); console.log('colorblind', window.__colorblind); }
+});
+// Step 4: restore settings on load
+try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); window.__muted = !!s.muted; window.__shake = s.shake!==false; window.__colorblind = !!s.colorblind; if(window.__colorblind) document.body.classList.add('colorblind'); }catch(_){}

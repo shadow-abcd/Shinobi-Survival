@@ -657,8 +657,8 @@ export class World {
     p.hp -= amount;
     this.damageTaken += amount; this.hitsTaken += 1; this.deathCause = source; this.deathTime = this.t;
     p.iframe = 0.45;              // brief mercy window after any hit, so a crowd cannot shred in one tick
-    p.hitFlash = 1;
-    this.shake = Math.min(12, this.shake + 3.5);
+    p.hitFlash = 0.6; // Step 4: softer hit flash, less whiteout
+    if (this.settings?.shake !== false) this.shake = Math.min(6, this.shake + 2.0); // Step 4: shake toggle
     this.lastHitSource = source;
     this.bus.emit('player:hurt', { amount, source });
     if (p.hp <= 0) {
@@ -682,7 +682,7 @@ export class World {
     if (ok) {
       ab.cd = ab.cdMax;
       this.bus.emit('cast', { id: ab.id, empowered: armed, element: ABILITIES[ab.id].element });
-      if (armed) this.shake = Math.min(8, this.shake + 1.6);
+      if (armed) this.shake = Math.min(6, this.shake + 1.0); // Step 4: cap shake 6
     }
     ab.cd = Math.max(0, ab.cd);
     return ok;
