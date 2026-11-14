@@ -235,7 +235,7 @@ body.colorblind .status-aerated { outline: 2px dotted #fff; }
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-14T08:24:00.006Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-14T10:31:55.430Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -1885,6 +1885,29 @@ function bankRun(save, result) {
   }
   return earned;
 }
+
+// Academy 2.0 — 20 Research Nodes (was 5 globals) + 2 New Clans (Mist + Iron)
+const ACADEMY2_NODES = {
+  crit: { id: 'crit', name: 'Keen Eye', desc: '+2% crit per rank', max: 5, flat: 40 },
+  area: { id: 'area', name: 'Wide Jutsu', desc: '+8% area per rank', max: 5, flat: 40 },
+  duration: { id: 'duration', name: 'Lasting Jutsu', desc: '+10% duration per rank', max: 5, flat: 40 },
+  projectile: { id: 'projectile', name: 'Twin Cast', desc: '+1 projectile at rank 3', max: 3, flat: 60 },
+  revive: { id: 'revive', name: 'Second Wind', desc: 'Revive once per run at rank 1', max: 1, flat: 200 },
+  startR2: { id: 'startR2', name: 'Veteran', desc: 'Start with Fireball R2', max: 1, flat: 100 },
+  magnet2: { id: 'magnet2', name: 'Deep Pull', desc: '+15% magnet per rank', max: 3, flat: 30 },
+  armor: { id: 'armor', name: 'Iron Skin', desc: '-5% damage taken per rank', max: 3, flat: 50 },
+  regen2: { id: 'regen2', name: 'Vitality', desc: '+0.3 HP/s per rank', max: 3, flat: 50 },
+  cdr2: { id: 'cdr2', name: 'Swift Hands', desc: '+4% CDR per rank', max: 5, flat: 40 },
+  xp: { id: 'xp', name: 'Quick Learner', desc: '+10% XP per rank', max: 3, flat: 40 },
+  seals: { id: 'seals', name: 'Seal Hunter', desc: '+10% Seals per rank', max: 3, flat: 40 },
+  dash: { id: 'dash', name: 'Swift Dash', desc: '-10% dash cooldown per rank', max: 3, flat: 40 },
+  ult: { id: 'ult', name: 'Ultimate Charge', desc: '+10% Chakra gain per rank', max: 3, flat: 40 },
+  burn: { id: 'burn', name: 'Burning Touch', desc: '+15% Burn damage per rank', max: 3, flat: 40 },
+};
+const CLANS2 = {
+  mist: { id: 'mist', name: 'Mist', unlockMinutes: 240, hp: 0.90, chakra: 1.20, speed: 1.05, trait: 'Mist Veil: 10% chance to dodge, +20% crit on dodge.', short: 'Stealth · crit · dodge' },
+  iron: { id: 'iron', name: 'Iron', unlockMinutes: 360, hp: 1.30, chakra: 0.85, speed: 0.90, trait: 'Iron Body: -15% damage taken, thorns reflect 20%.', short: 'Tank · thorns · slow' },
+};
 
 
 /* ---- src/core/world.js ---- */
