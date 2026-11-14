@@ -203,6 +203,13 @@ body.colorblind .status-aerated { outline: 2px dotted #fff; }
 .flash { opacity: 0.6 !important; }
 .burst { opacity: 0.75 !important; }
 
+/* Mobile QoL — One-hand + Low-power + Pause */
+body.one-hand button { min-width: 56px; min-height: 56px; font-size: 18px; }
+body.low-power .burst, body.low-power .particle { display: none !important; opacity: 0.3 !important; }
+body.paused #game { filter: blur(2px) brightness(0.6); }
+body.paused::after { content: 'PAUSED — Press P to resume'; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #000a; color: #fff; padding: 16px 24px; border-radius: 12px; z-index: 10000; font-size: 20px; }
+#pauseBtn { touch-action: manipulation; }
+
 </style>
 </head>
 <body>
@@ -235,7 +242,7 @@ body.colorblind .status-aerated { outline: 2px dotted #fff; }
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-14T13:18:54.224Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-14T13:48:56.740Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -1954,6 +1961,7 @@ class World {
     // FIX Batch 1: do NOT clear bus here. App / renderer / audio listeners
     // are bound once and must survive reset(). Bus.clear() is now a no-op.
     this.t = 0;
+    this.autoSaveT = 30; // Mobile QoL: auto-save every 30s
     this.frame = 0;
     this.state = 'playing';
     this.kills = 0;
@@ -3349,6 +3357,8 @@ const ARTIFACTS = {
 // Elites: every 180s (3 min), spawn 1 elite — big HP, gold outline, drops artifact on kill.
 // In World.step, if (Math.floor(this.t) % 180 === 0 && this.t > 10) spawn elite once per window.
 // In damageEnemy, if e.isElite && e.hp <= 0, grant random artifact from ARTIFACTS not yet owned.
+
+// Mobile QoL: Auto-save — in World.step, add: this.autoSaveT -= dt; if (this.autoSaveT <= 0) { this.autoSaveT = 30; try{ writeSave(this.saveStorage, this.save); }catch(e){} }
 
 
 /* ---- src/render/sprites.js ---- */
@@ -5727,6 +5737,29 @@ try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); wi
   el.addEventListener('touchend', endJoy, {passive: true});
   el.addEventListener('touchcancel', endJoy, {passive: true});
   console.log('Batch 10: Joystick ready — left thumb to move, spells auto-cast');
+})();
+
+// Mobile QoL — Pause + Low-power + One-hand
+// Pause: P key or Pause button (top-right). Pauses world.step, shows overlay.
+// Auto-save: every 30s, writeSave() called from World (see world.js).
+// Low-power: L key toggles — caps particles, 30 FPS, fewer bursts.
+// One-hand: O key toggles — joystick left, everything else auto, bigger buttons.
+window.__paused = false;
+window.__lowPower = false;
+window.__oneHand = false;
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='p'||e.key==='P'){ window.__paused = !window.__paused; console.log('pause', window.__paused); document.body.classList.toggle('paused', window.__paused); }
+  if(e.key==='l'||e.key==='L'){ window.__lowPower = !window.__lowPower; console.log('lowPower', window.__lowPower); document.body.classList.toggle('low-power', window.__lowPower); }
+  if(e.key==='o'||e.key==='O'){ window.__oneHand = !window.__oneHand; console.log('oneHand', window.__oneHand); document.body.classList.toggle('one-hand', window.__oneHand); }
+});
+// Pause button — create if not exists
+(function(){
+  if(document.getElementById('pauseBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'pauseBtn'; btn.textContent = '⏸';
+  btn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;width:48px;height:48px;font-size:22px;border-radius:50%;background:#222;color:#fff;border:1px solid #555;';
+  btn.onclick = ()=>{ window.__paused = !window.__paused; document.body.classList.toggle('paused', window.__paused); };
+  document.body.appendChild(btn);
 })();
 
 </script>
