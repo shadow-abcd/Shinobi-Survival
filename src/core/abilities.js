@@ -77,9 +77,9 @@ export const ABILITIES = {
   },
   chainLightning: {
     id: 'chainLightning', name: 'Chain Lightning', element: 'lightning', tier: 2, parent: 'spark',
-    target: 'nearest', kind: 'chain', cd: 7.0, range: 260, coeff: 2.0, chains: 4,
+    target: 'nearest', kind: 'chain', cd: 2.8, range: 260, coeff: 2.0, chains: 4,
     status: null, stacks: 0,
-    desc: 'Arcs through up to four enemies. Detonates Drenched.',
+    desc: 'Lightning chains to 3-5 enemies. R5: 5 chains. Detonates Drenched.',
   },
   lightningArmor: {
     id: 'lightningArmor', name: 'Lightning Armor', element: 'lightning', tier: 2, parent: 'spark',
@@ -143,6 +143,37 @@ export const ABILITIES = {
     status: 'rooted', stacks: 1,
     desc: 'The ground itself rises. Roots everything in a wide radius.',
   },
+  // ---------------- BATCH 11 — NEW JUTSU (fixed: real kind/target/cd/coeff) ----------------
+  blizzard: {
+    id: 'blizzard', name: 'Blizzard', element: 'water', tier: 2, parent: 'waterBullet',
+    target: 'self', kind: 'burst', cd: 6.0, range: 700, coeff: 1.5, r: 220,
+    status: 'frozen', stacks: 1,
+    desc: 'Ice nova around you, freezes + slows. R5: bigger + longer freeze.',
+  },
+  meteor: {
+    id: 'meteor', name: 'Meteor', element: 'fire', tier: 2, parent: 'fireball',
+    target: 'densest', kind: 'burst', cd: 7.0, range: 700, coeff: 2.5, r: 180,
+    status: 'burning', stacks: 1,
+    desc: 'Meteor falls on densest pack, big AoE. R5: 2 meteors.',
+  },
+  venomPool: {
+    id: 'venomPool', name: 'Venom Pool', element: 'earth', tier: 2, parent: 'stoneSpike',
+    target: 'self', kind: 'wall', cd: 5.0, range: 640, coeff: 0.6, tickRate: 0.5,
+    r: 140, life: 3.0, status: 'poisoned', stacks: 1, segments: 1,
+    desc: 'Leaves poison pool, DoT. R5: bigger + longer.',
+  },
+  kunai: {
+    id: 'kunai', name: 'Boomerang Kunai', element: 'wind', tier: 2, parent: 'windSlash',
+    target: 'facing', kind: 'projectile', cd: 2.2, range: 720, coeff: 1.0,
+    speed: 760, pierce: 2, burst: 0, r: 8, status: 'aerated', stacks: 1, shape: 'kunai',
+    desc: 'Kunai flies out and returns, hits twice. R5: 2 kunai.',
+  },
+  gravityWell: {
+    id: 'gravityWell', name: 'Gravity Well', element: 'earth', tier: 3, parent: 'terraform',
+    target: 'densest', kind: 'burst', cd: 9.0, range: 700, coeff: 2.0, r: 260,
+    pull: 300, status: 'staggered', stacks: 1,
+    desc: 'Pulls enemies in, then explodes. R5: bigger pull + damage.',
+  },
 };
 
 // Ten fusion pairs (design §5.4). A pair fires when a hit of one element meets the other's status.
@@ -184,23 +215,3 @@ export const ULTIMATES = {
 };
 
 export const ULTIMATE_COST = 100;
-
-// Batch 11: New Jutsu — +6 spells to reach 18 total
-Object.assign(ABILITIES, {
-  chainLightning: { id: 'chainLightning', name: 'Chain Lightning', element: 'lightning', cd: 2.8, tag: 'Chain', desc: 'Lightning chains to 3-5 enemies. R5: 5 chains.', shape: 'bolt' },
-  blizzard: { id: 'blizzard', name: 'Blizzard', element: 'water', cd: 6.0, tag: 'AoE', desc: 'Ice nova around you, freezes + slows. R5: bigger.', shape: 'nova' },
-  meteor: { id: 'meteor', name: 'Meteor', element: 'fire', cd: 7.0, tag: 'AoE', desc: 'Meteor falls on densest pack, big AoE. R5: 2 meteors.', shape: 'burst' },
-  venomPool: { id: 'venomPool', name: 'Venom Pool', element: 'earth', cd: 5.0, tag: 'DoT', desc: 'Leaves poison pool, DoT. R5: bigger + longer.', shape: 'field' },
-  kunai: { id: 'kunai', name: 'Boomerang Kunai', element: 'wind', cd: 2.2, tag: 'Return', desc: 'Kunai flies out and returns, hits twice. R5: 2 kunai.', shape: 'orb' },
-  gravityWell: { id: 'gravityWell', name: 'Gravity Well', element: 'void', cd: 9.0, tag: 'Pull', desc: 'Pulls enemies in, then explodes. R5: bigger pull.', shape: 'burst' },
-});
-if (typeof FUSIONS !== 'undefined') {
-  Object.assign(FUSIONS, {
-    stormSurge: { id: 'stormSurge', name: 'Storm Surge', needs: ['chainLightning', 'waterBullet'], desc: 'Chains +2, wet enemies take +50%.' },
-    magmaEruption: { id: 'magmaEruption', name: 'Magma Eruption', needs: ['meteor', 'stoneSpike'], desc: 'Lava pool, burn + slow.' },
-    whiteout: { id: 'whiteout', name: 'Whiteout', needs: ['blizzard', 'windSlash'], desc: 'Full-screen freeze, all slowed 2s.' },
-    toxicFlame: { id: 'toxicFlame', name: 'Toxic Flame', needs: ['venomPool', 'fireball'], desc: 'Poison pool burns, DoT + burn.' },
-    bladeStorm: { id: 'bladeStorm', name: 'Blade Storm', needs: ['kunai', 'windSlash'], desc: '5 kunai in circle, hits twice.' },
-    singularity: { id: 'singularity', name: 'Singularity', needs: ['gravityWell', 'spark'], desc: 'Pull + lightning explosion.' },
-  });
-}

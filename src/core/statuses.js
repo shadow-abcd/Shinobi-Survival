@@ -11,6 +11,11 @@ export const STATUS = {
     refresh: 'stack', detonatedBy: 'wind', detonateMult: 2.0, spread: 0, icd: 2.5,
     damageBonus: 0, dotPerStack: 2, dotInterval: 0.5,
   },
+  poisoned: {
+    id: 'poisoned', element: 'earth', name: 'Poisoned', color: '#7fe86a', duration: 3.0, maxStacks: 3,
+    refresh: 'stack', detonatedBy: 'fire', detonateMult: 1.5, spread: 0, icd: 2.5,
+    damageBonus: 0, dotPerStack: 2, dotInterval: 0.5,
+  },
   drenched: {
     id: 'drenched', element: 'water', name: 'Drenched', color: '#63b7ff', duration: 5.0, maxStacks: 1,
     refresh: 'duration', detonatedBy: 'lightning', detonateMult: 2.5, spread: 3, icd: 2.5,
