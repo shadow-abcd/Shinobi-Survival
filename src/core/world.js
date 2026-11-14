@@ -14,6 +14,15 @@ export const TICK = 1 / 60;
 export const RUN_LENGTH = 1200;        // 20 minutes: four bosses, three world phases
 const BOSS_TIMES = [300, 600, 900, 1200];
 
+// Maps Batch: 3 Maps — forest / desert / frost. Same engine, different mix + palette.
+export const MAPS = {
+  forest: { id: 'forest', name: 'Forest', unlockMinutes: 0, bg: '#0a1a0f', ground: '#1a2f1a', fog: '#0a1a0f', spawnMult: 1.0, hpMult: 1.0, mix: { fodder: 10, brute: 1.6, archer: 2.2, teleporter: 0.9, siphoner: 0.9 } },
+  desert: { id: 'desert', name: 'Desert', unlockMinutes: 30, bg: '#2a1a0a', ground: '#3a2a1a', fog: '#2a1a0a', spawnMult: 0.95, hpMult: 1.05, mix: { fodder: 7, brute: 2.5, archer: 3.5, teleporter: 0.7, siphoner: 0.6 } },
+  frost:  { id: 'frost',  name: 'Frost',  unlockMinutes: 90, bg: '#0a1a2a', ground: '#1a2a3a', fog: '#0a1a2a', spawnMult: 1.05, hpMult: 1.10, mix: { fodder: 8, brute: 1.8, archer: 1.8, teleporter: 1.8, siphoner: 1.5 } },
+};
+export function mapUnlocked(save, id){ const m = MAPS[id]; return !m || (save?.survivedMinutes || 0) >= m.unlockMinutes || save?.clans?.ember; }
+
+
 export class World {
   constructor(seed = 1337) {
     this.rng = new RNG(seed);
@@ -49,6 +58,8 @@ export class World {
     this.bossActive = false;
     this.safeT = 0;
     this.phase = 1;
+    this.mapId = (this.save?.map || 'forest');
+    this.map = MAPS[this.mapId] || MAPS.forest;
     this.bossHpMult = 1;
     this.choiceBoss = null;
     this.extracted = false;
@@ -158,6 +169,9 @@ export class World {
   maxOnScreen() { return Math.round(maxOnScreen(this.minutes) * (this.enemyCountMult || 1)); }
 
   spawnTable(min) {
+    // Maps Batch: desert = more archers/brutes, frost = more teleporter/siphoner
+    const mix = this.map?.mix;
+    if (mix) { const tt = []; tt.push({ id: 'fodder', w: mix.fodder }); if (min > 2.2) tt.push({ id: 'brute', w: mix.brute + min * 0.10 }); if (min > 3.2) tt.push({ id: 'archer', w: mix.archer }); if (min > 9) tt.push({ id: 'teleporter', w: mix.teleporter }); if (min > 9) tt.push({ id: 'siphoner', w: mix.siphoner }); return tt; }
     const t = [];
     t.push({ id: 'fodder', w: 10 });
     if (min > 2.2) t.push({ id: 'brute', w: 1.6 + min * 0.10 });

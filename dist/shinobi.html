@@ -235,7 +235,7 @@ body.colorblind .status-aerated { outline: 2px dotted #fff; }
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-14T05:59:38.235Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-14T06:19:49.998Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -1648,6 +1648,7 @@ function defaultSave() {
     runs: 0,
     wins: 0,
     clan: 'ember',
+    map: 'forest', // Maps Batch: forest / desert / frost
     clans: { ember: true, stoneward: false, gale: false, tide: false },
     global: { hp: 0, dmg: 0, spd: 0, mag: 0, chk: 0 },
     arsenal: {},
@@ -1867,6 +1868,14 @@ function bankRun(save, result) {
 const TICK = 1 / 60;
 const RUN_LENGTH = 1200;        // 20 minutes: four bosses, three world phases
 const BOSS_TIMES = [300, 600, 900, 1200];
+
+// Maps Batch: 3 Maps — forest / desert / frost. Same engine, different mix + palette.
+const MAPS = {
+  forest: { id: 'forest', name: 'Forest', unlockMinutes: 0, bg: '#0a1a0f', ground: '#1a2f1a', fog: '#0a1a0f', spawnMult: 1.0, hpMult: 1.0, mix: { fodder: 10, brute: 1.6, archer: 2.2, teleporter: 0.9, siphoner: 0.9 } },
+  desert: { id: 'desert', name: 'Desert', unlockMinutes: 30, bg: '#2a1a0a', ground: '#3a2a1a', fog: '#2a1a0a', spawnMult: 0.95, hpMult: 1.05, mix: { fodder: 7, brute: 2.5, archer: 3.5, teleporter: 0.7, siphoner: 0.6 } },
+  frost:  { id: 'frost',  name: 'Frost',  unlockMinutes: 90, bg: '#0a1a2a', ground: '#1a2a3a', fog: '#0a1a2a', spawnMult: 1.05, hpMult: 1.10, mix: { fodder: 8, brute: 1.8, archer: 1.8, teleporter: 1.8, siphoner: 1.5 } },
+};
+function mapUnlocked(save, id){ const m = MAPS[id]; return !m || (save?.survivedMinutes || 0) >= m.unlockMinutes || save?.clans?.ember; }
 class World {
   constructor(seed = 1337) {
     this.rng = new RNG(seed);
@@ -1902,6 +1911,8 @@ class World {
     this.bossActive = false;
     this.safeT = 0;
     this.phase = 1;
+    this.mapId = (this.save?.map || 'forest');
+    this.map = MAPS[this.mapId] || MAPS.forest;
     this.bossHpMult = 1;
     this.choiceBoss = null;
     this.extracted = false;
@@ -2011,6 +2022,9 @@ class World {
   maxOnScreen() { return Math.round(maxOnScreen(this.minutes) * (this.enemyCountMult || 1)); }
 
   spawnTable(min) {
+    // Maps Batch: desert = more archers/brutes, frost = more teleporter/siphoner
+    const mix = this.map?.mix;
+    if (mix) { const tt = []; tt.push({ id: 'fodder', w: mix.fodder }); if (min > 2.2) tt.push({ id: 'brute', w: mix.brute + min * 0.10 }); if (min > 3.2) tt.push({ id: 'archer', w: mix.archer }); if (min > 9) tt.push({ id: 'teleporter', w: mix.teleporter }); if (min > 9) tt.push({ id: 'siphoner', w: mix.siphoner }); return tt; }
     const t = [];
     t.push({ id: 'fodder', w: 10 });
     if (min > 2.2) t.push({ id: 'brute', w: 1.6 + min * 0.10 });
@@ -5072,6 +5086,9 @@ class UI {
     }
   }
 }
+
+// Maps Batch: Map select — forest (0 min), desert (30 min), frost (90 min). Set save.map before starting a run.
+// In Academy / Start screen, add: <select id='mapSelect'><option value='forest'>Forest</option><option value='desert'>Desert</option><option value='frost'>Frost</option></select>
 
 
 /* ---- src/ui/audio.js ---- */

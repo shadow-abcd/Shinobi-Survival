@@ -74,6 +74,7 @@ export function defaultSave() {
     runs: 0,
     wins: 0,
     clan: 'ember',
+    map: 'forest', // Maps Batch: forest / desert / frost
     clans: { ember: true, stoneward: false, gale: false, tide: false },
     global: { hp: 0, dmg: 0, spd: 0, mag: 0, chk: 0 },
     arsenal: {},

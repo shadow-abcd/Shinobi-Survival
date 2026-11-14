@@ -275,3 +275,6 @@ export class UI {
     }
   }
 }
+
+// Maps Batch: Map select — forest (0 min), desert (30 min), frost (90 min). Set save.map before starting a run.
+// In Academy / Start screen, add: <select id='mapSelect'><option value='forest'>Forest</option><option value='desert'>Desert</option><option value='frost'>Frost</option></select>
