@@ -235,7 +235,7 @@ body.colorblind .status-aerated { outline: 2px dotted #fff; }
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-14T06:35:59.552Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-14T07:45:06.775Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -606,6 +606,26 @@ const ULTIMATES = {
   },
 };
 const ULTIMATE_COST = 100;
+
+// Batch 11: New Jutsu — +6 spells to reach 18 total
+Object.assign(ABILITIES, {
+  chainLightning: { id: 'chainLightning', name: 'Chain Lightning', element: 'lightning', cd: 2.8, tag: 'Chain', desc: 'Lightning chains to 3-5 enemies. R5: 5 chains.', shape: 'bolt' },
+  blizzard: { id: 'blizzard', name: 'Blizzard', element: 'water', cd: 6.0, tag: 'AoE', desc: 'Ice nova around you, freezes + slows. R5: bigger.', shape: 'nova' },
+  meteor: { id: 'meteor', name: 'Meteor', element: 'fire', cd: 7.0, tag: 'AoE', desc: 'Meteor falls on densest pack, big AoE. R5: 2 meteors.', shape: 'burst' },
+  venomPool: { id: 'venomPool', name: 'Venom Pool', element: 'earth', cd: 5.0, tag: 'DoT', desc: 'Leaves poison pool, DoT. R5: bigger + longer.', shape: 'field' },
+  kunai: { id: 'kunai', name: 'Boomerang Kunai', element: 'wind', cd: 2.2, tag: 'Return', desc: 'Kunai flies out and returns, hits twice. R5: 2 kunai.', shape: 'orb' },
+  gravityWell: { id: 'gravityWell', name: 'Gravity Well', element: 'void', cd: 9.0, tag: 'Pull', desc: 'Pulls enemies in, then explodes. R5: bigger pull.', shape: 'burst' },
+});
+if (typeof FUSIONS !== 'undefined') {
+  Object.assign(FUSIONS, {
+    stormSurge: { id: 'stormSurge', name: 'Storm Surge', needs: ['chainLightning', 'waterBullet'], desc: 'Chains +2, wet enemies take +50%.' },
+    magmaEruption: { id: 'magmaEruption', name: 'Magma Eruption', needs: ['meteor', 'stoneSpike'], desc: 'Lava pool, burn + slow.' },
+    whiteout: { id: 'whiteout', name: 'Whiteout', needs: ['blizzard', 'windSlash'], desc: 'Full-screen freeze, all slowed 2s.' },
+    toxicFlame: { id: 'toxicFlame', name: 'Toxic Flame', needs: ['venomPool', 'fireball'], desc: 'Poison pool burns, DoT + burn.' },
+    bladeStorm: { id: 'bladeStorm', name: 'Blade Storm', needs: ['kunai', 'windSlash'], desc: '5 kunai in circle, hits twice.' },
+    singularity: { id: 'singularity', name: 'Singularity', needs: ['gravityWell', 'spark'], desc: 'Pull + lightning explosion.' },
+  });
+}
 
 
 /* ---- src/core/statuses.js ---- */
