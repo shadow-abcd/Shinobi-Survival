@@ -27,8 +27,8 @@ export const ENEMY_TYPES = {
 export function enemyHP(minutes) { return 20 * Math.pow(1.078, minutes); }
 // FIX Batch 3 (spawn formulas): design is SpawnRate = min(12, 1.5 + 0.9*min), MaxOnScreen = min(900, 120 + 40*min).
 // Code was min(16, 2.0 + 1.05*min) / min(900, 130 + 45*min) — at 10 min: 12.5/s vs 10.5/s (+19%), at 20 min: 16/s cap vs 12/s cap (+33%).
-export function spawnRate(minutes) { return Math.min(11, 1.5 + 0.9 * minutes); }
-export function maxOnScreen(minutes) { return Math.min(750, 120 + 40 * minutes); }
+export function spawnRate(minutes) { return Math.min(11, 1.2 + 0.75 * minutes); } // Batch 9: gentler early (0-10 min), same late cap
+export function maxOnScreen(minutes) { return Math.min(750, 100 + 32 * minutes); } // Batch 9: gentler early cap, same late
 export function podSize(minutes) { return 3 + Math.min(7, Math.floor(minutes / 4)); }
 
 // SpawnRate(t) is enemies per second. Pairs and small pods add visual variety without

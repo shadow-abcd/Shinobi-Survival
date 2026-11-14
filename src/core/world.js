@@ -656,7 +656,7 @@ export class World {
     }
     p.hp -= amount;
     this.damageTaken += amount; this.hitsTaken += 1; this.deathCause = source; this.deathTime = this.t;
-    p.iframe = 0.45;              // brief mercy window after any hit, so a crowd cannot shred in one tick
+    p.iframe = this.minutes < 10 ? 0.6 : 0.45; // Batch 9: mercy window early for phone              // brief mercy window after any hit, so a crowd cannot shred in one tick
     p.hitFlash = 0.6; // Step 4: softer hit flash, less whiteout
     if (this.settings?.shake !== false) this.shake = Math.min(6, this.shake + 2.0); // Step 4: shake toggle
     this.lastHitSource = source;
