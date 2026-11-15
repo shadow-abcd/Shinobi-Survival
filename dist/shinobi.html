@@ -242,7 +242,7 @@ body.paused::after { content: 'PAUSED — Press P to resume'; position: fixed; t
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-15T00:41:48.055Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-15T00:51:09.836Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -3361,6 +3361,8 @@ const ARTIFACTS = {
 // In damageEnemy, if e.isElite && e.hp <= 0, grant random artifact from ARTIFACTS not yet owned.
 
 // Mobile QoL: Auto-save — in World.step, add: this.autoSaveT -= dt; if (this.autoSaveT <= 0) { this.autoSaveT = 30; try{ writeSave(this.saveStorage, this.save); }catch(e){} }
+
+// Endless + Boss Rush — in World: this.mode = 'normal'|'endless'|'bossRush'; if bossRush, spawnRate=0, bosses=[0,60,120,180]; if endless, timeLimit=Infinity, bosses repeat every 300s after 1800.
 
 
 /* ---- src/render/sprites.js ---- */

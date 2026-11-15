@@ -1436,3 +1436,5 @@ export const ARTIFACTS = {
 // In damageEnemy, if e.isElite && e.hp <= 0, grant random artifact from ARTIFACTS not yet owned.
 
 // Mobile QoL: Auto-save — in World.step, add: this.autoSaveT -= dt; if (this.autoSaveT <= 0) { this.autoSaveT = 30; try{ writeSave(this.saveStorage, this.save); }catch(e){} }
+
+// Endless + Boss Rush — in World: this.mode = 'normal'|'endless'|'bossRush'; if bossRush, spawnRate=0, bosses=[0,60,120,180]; if endless, timeLimit=Infinity, bosses repeat every 300s after 1800.
