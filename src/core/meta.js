@@ -94,7 +94,7 @@ export function defaultSave() {
 // Migrate them to ember/stoneward/gale/tide/spectral so old saves keep working.
 const CLAN_MIGRATION = { uchiha: 'ember', nara: 'stoneward', hyuga: 'gale', uzumaki: 'tide' };
 const ULTIMATE_MIGRATION = { susanoo: 'spectral' };
-function migrateSave(parsed) {
+export function migrateSave(parsed) {
   if (!parsed || typeof parsed !== 'object') return parsed;
   if (parsed.clan && CLAN_MIGRATION[parsed.clan]) parsed.clan = CLAN_MIGRATION[parsed.clan];
   for (const [oldKey, newKey] of Object.entries(CLAN_MIGRATION)) {
