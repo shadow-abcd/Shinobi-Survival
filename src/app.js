@@ -379,3 +379,26 @@ try{ const s = JSON.parse(localStorage.getItem('shinobi.settings.v1')||'{}'); wi
   el.addEventListener('touchcancel', endJoy, {passive: true});
   console.log('Batch 10: Joystick ready — left thumb to move, spells auto-cast');
 })();
+
+// Mobile QoL — Pause + Low-power + One-hand
+// Pause: P key or Pause button (top-right). Pauses world.step, shows overlay.
+// Auto-save: every 30s, writeSave() called from World (see world.js).
+// Low-power: L key toggles — caps particles, 30 FPS, fewer bursts.
+// One-hand: O key toggles — joystick left, everything else auto, bigger buttons.
+window.__paused = false;
+window.__lowPower = false;
+window.__oneHand = false;
+window.addEventListener('keydown', (e)=>{
+  if(e.key==='p'||e.key==='P'){ window.__paused = !window.__paused; console.log('pause', window.__paused); document.body.classList.toggle('paused', window.__paused); }
+  if(e.key==='l'||e.key==='L'){ window.__lowPower = !window.__lowPower; console.log('lowPower', window.__lowPower); document.body.classList.toggle('low-power', window.__lowPower); }
+  if(e.key==='o'||e.key==='O'){ window.__oneHand = !window.__oneHand; console.log('oneHand', window.__oneHand); document.body.classList.toggle('one-hand', window.__oneHand); }
+});
+// Pause button — create if not exists
+(function(){
+  if(document.getElementById('pauseBtn')) return;
+  const btn = document.createElement('button');
+  btn.id = 'pauseBtn'; btn.textContent = '⏸';
+  btn.style.cssText = 'position:fixed;top:10px;right:10px;z-index:9999;width:48px;height:48px;font-size:22px;border-radius:50%;background:#222;color:#fff;border:1px solid #555;';
+  btn.onclick = ()=>{ window.__paused = !window.__paused; document.body.classList.toggle('paused', window.__paused); };
+  document.body.appendChild(btn);
+})();

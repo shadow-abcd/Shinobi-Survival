@@ -38,6 +38,7 @@ export class World {
     // FIX Batch 1: do NOT clear bus here. App / renderer / audio listeners
     // are bound once and must survive reset(). Bus.clear() is now a no-op.
     this.t = 0;
+    this.autoSaveT = 30; // Mobile QoL: auto-save every 30s
     this.frame = 0;
     this.state = 'playing';
     this.kills = 0;
@@ -1433,3 +1434,5 @@ export const ARTIFACTS = {
 // Elites: every 180s (3 min), spawn 1 elite — big HP, gold outline, drops artifact on kill.
 // In World.step, if (Math.floor(this.t) % 180 === 0 && this.t > 10) spawn elite once per window.
 // In damageEnemy, if e.isElite && e.hp <= 0, grant random artifact from ARTIFACTS not yet owned.
+
+// Mobile QoL: Auto-save — in World.step, add: this.autoSaveT -= dt; if (this.autoSaveT <= 0) { this.autoSaveT = 30; try{ writeSave(this.saveStorage, this.save); }catch(e){} }

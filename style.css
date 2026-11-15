@@ -195,3 +195,10 @@ body.colorblind .status-aerated { outline: 2px dotted #fff; }
 /* Step 4: reduced whiteout — softer flashes */
 .flash { opacity: 0.6 !important; }
 .burst { opacity: 0.75 !important; }
+
+/* Mobile QoL — One-hand + Low-power + Pause */
+body.one-hand button { min-width: 56px; min-height: 56px; font-size: 18px; }
+body.low-power .burst, body.low-power .particle { display: none !important; opacity: 0.3 !important; }
+body.paused #game { filter: blur(2px) brightness(0.6); }
+body.paused::after { content: 'PAUSED — Press P to resume'; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #000a; color: #fff; padding: 16px 24px; border-radius: 12px; z-index: 10000; font-size: 20px; }
+#pauseBtn { touch-action: manipulation; }
