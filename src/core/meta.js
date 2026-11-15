@@ -322,3 +322,5 @@ export const CLANS2 = {
   mist: { id: 'mist', name: 'Mist', unlockMinutes: 240, hp: 0.90, chakra: 1.20, speed: 1.05, trait: 'Mist Veil: 10% chance to dodge, +20% crit on dodge.', short: 'Stealth · crit · dodge' },
   iron: { id: 'iron', name: 'Iron', unlockMinutes: 360, hp: 1.30, chakra: 0.85, speed: 0.90, trait: 'Iron Body: -15% damage taken, thorns reflect 20%.', short: 'Tank · thorns · slow' },
 };
+
+// Achievements + Quests — meta: unlockedAchievements: Set, dailyProgress: {}
