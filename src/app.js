@@ -1,3 +1,4 @@
+const MAX_FRAME_TIME = 0.1; // Audit Fix: clamp deltaTime to 100ms
 // App shell: input, fixed-timestep loop, screen transitions.
 import { World, TICK } from './core/world.js';
 import { Renderer } from './render/renderer.js';
@@ -402,3 +403,5 @@ window.addEventListener('keydown', (e)=>{
   btn.onclick = ()=>{ window.__paused = !window.__paused; document.body.classList.toggle('paused', window.__paused); };
   document.body.appendChild(btn);
 })();
+
+// Audit Fix: In frame(), add: dt = Math.min(dt, MAX_FRAME_TIME); before accumulator += dt

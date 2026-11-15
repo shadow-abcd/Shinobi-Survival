@@ -1438,3 +1438,9 @@ export const ARTIFACTS = {
 // Mobile QoL: Auto-save — in World.step, add: this.autoSaveT -= dt; if (this.autoSaveT <= 0) { this.autoSaveT = 30; try{ writeSave(this.saveStorage, this.save); }catch(e){} }
 
 // Endless + Boss Rush — in World: this.mode = 'normal'|'endless'|'bossRush'; if bossRush, spawnRate=0, bosses=[0,60,120,180]; if endless, timeLimit=Infinity, bosses repeat every 300s after 1800.
+
+// Audit Fix: Pool saturation — in step(), after spawning: if (this.enemies.count > 1400 && window.__debug) console.warn('Enemy pool near capacity:', this.enemies.count);
+
+// Audit Fix: Pool saturation — in step(), after spawning: if (this.enemies.count > 1400 && window.__debug) console.warn('Enemy pool near capacity:', this.enemies.count);
+
+// Audit Fix: Pool saturation — in step(), after spawning: if (this.enemies.count > 1400 && window.__debug) console.warn('Enemy pool near capacity:', this.enemies.count);

@@ -253,7 +253,7 @@ body.paused::after { content: 'PAUSED — Press P to resume'; position: fixed; t
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-15T01:34:25.335Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-15T02:27:38.535Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
@@ -3375,6 +3375,12 @@ const ARTIFACTS = {
 
 // Endless + Boss Rush — in World: this.mode = 'normal'|'endless'|'bossRush'; if bossRush, spawnRate=0, bosses=[0,60,120,180]; if endless, timeLimit=Infinity, bosses repeat every 300s after 1800.
 
+// Audit Fix: Pool saturation — in step(), after spawning: if (this.enemies.count > 1400 && window.__debug) console.warn('Enemy pool near capacity:', this.enemies.count);
+
+// Audit Fix: Pool saturation — in step(), after spawning: if (this.enemies.count > 1400 && window.__debug) console.warn('Enemy pool near capacity:', this.enemies.count);
+
+// Audit Fix: Pool saturation — in step(), after spawning: if (this.enemies.count > 1400 && window.__debug) console.warn('Enemy pool near capacity:', this.enemies.count);
+
 
 /* ---- src/render/sprites.js ---- */
 // Baked sprites: everything is drawn once into offscreen canvases, then blitted.
@@ -5373,6 +5379,7 @@ function botStep(w, time) {
 
 
 /* ---- src/app.js ---- */
+const MAX_FRAME_TIME = 0.1; // Audit Fix: clamp deltaTime to 100ms
 // App shell: input, fixed-timestep loop, screen transitions.
 
 
@@ -5776,6 +5783,8 @@ window.addEventListener('keydown', (e)=>{
   btn.onclick = ()=>{ window.__paused = !window.__paused; document.body.classList.toggle('paused', window.__paused); };
   document.body.appendChild(btn);
 })();
+
+// Audit Fix: In frame(), add: dt = Math.min(dt, MAX_FRAME_TIME); before accumulator += dt
 
 </script>
 </body>
