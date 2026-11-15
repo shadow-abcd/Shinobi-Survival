@@ -202,3 +202,9 @@ body.low-power .burst, body.low-power .particle { display: none !important; opac
 body.paused #game { filter: blur(2px) brightness(0.6); }
 body.paused::after { content: 'PAUSED — Press P to resume'; position: fixed; top: 50%; left: 50%; transform: translate(-50%,-50%); background: #000a; color: #fff; padding: 16px 24px; border-radius: 12px; z-index: 10000; font-size: 20px; }
 #pauseBtn { touch-action: manipulation; }
+
+/* Gaps Fix — Mobile Level-Up Cards: big touch targets, no 1/2/3 keys needed */
+.levelup-cards { display: flex; flex-direction: column; gap: 12px; padding: 12px; }
+.levelup-card { min-height: 88px; padding: 16px; font-size: 18px; border-radius: 12px; border: 2px solid #555; background: #222; color: #fff; text-align: left; touch-action: manipulation; }
+.levelup-card:active { background: #444; border-color: #fff; }
+@media (min-width: 700px) { .levelup-cards { flex-direction: row; } .levelup-card { flex: 1; } }

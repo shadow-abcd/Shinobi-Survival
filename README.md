@@ -76,3 +76,25 @@ node tests/combat.test.mjs   # 21 checks: statuses, prime/detonate, ICD, spread,
 node tests/sim.mjs --check    # 5 seeds + determinism + post-cap, fails on NaN / crash
 node tools/bundle.mjs .       # 18 modules -> dist/shinobi.html, fails on missing modules / placeholders
 ```
+
+## Balance Philosophy
+- Target: sim 3/5 wins, human 40% after Batch 9. Do NOT tune to 5/5 — 5/5 means too easy.
+- Enemy HP: 20 × 1.078^min (Batch 8: was 1.085, too brutal at 20 min). Spawn: min(11, 1.2+0.75×min), MaxOnScreen min(750, 100+32×min).
+- Fusions: 2.5s ICD — without ICD, Drenched+Lightning would chain-detonate every hit and trivialize. ICD forces you to time casts, not spam.
+- Chakra: +1 kill, +10 elite, +50 boss, Ultimate 100. Overcharge +50% dmg +30% radius, 8s cd, needs 50 Chakra — you choose Ultimate OR Overcharge, not both.
+
+## Feature Roadmap
+- ✅ Done: 30 min, 18 Jutsu, 12 Fusions, 6 Clans, 3 Maps, 6 Bosses, Artifacts+Elites, Academy 2.0, Joystick, R5 bigger, Mobile QoL, Achievements+Quests, Endless+Boss Rush, Daily Run+Leaderboard, Skins+Trails, Build Share (soon)
+- 🚧 Next: Build Share Code, Pets, Story + Boss Dialogue, Itch.io ship
+- ❌ Not planned: Co-op/PvP, Steam paid, Godot port (JS is canonical)
+
+## Known Issues
+- Phone throttling at 15+ min — use Low-power mode (L) for 30 FPS cap.
+- Batch 11 stubs fixed in Batch 11 FIX v3 (real kind/target/cd/coeff).
+- DNS in Kai Build can fail — work offline, commit locally, push later.
+
+## Contribution
+- Replace whole files, never paste snippets. Batches stack cumulatively.
+- Do not commit .bak files. Do not start new features until current batch is tested + committed.
+- Run: node tools/bundle.mjs . && node tests/combat.test.mjs && node tests/sim.mjs --check
+- Minimal IP rename only: Ember/Stoneward/Gale/Tide/Mist/Iron, keep Chakra/Jutsu/Genin/Chunin/Jonin/Kage/Shinobi/Seals.
