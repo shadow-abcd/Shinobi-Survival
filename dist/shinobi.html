@@ -216,6 +216,11 @@ body.paused::after { content: 'PAUSED — Press P to resume'; position: fixed; t
 .levelup-card:active { background: #444; border-color: #fff; }
 @media (min-width: 700px) { .levelup-cards { flex-direction: row; } .levelup-card { flex: 1; } }
 
+/* Quick Wins — Swipe Cards: horizontal swipe between level-up cards on mobile */
+.levelup-cards { overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.levelup-card { scroll-snap-align: center; min-width: 82vw; }
+.levelup-cards::-webkit-scrollbar { display: none; }
+
 </style>
 </head>
 <body>
@@ -248,7 +253,7 @@ body.paused::after { content: 'PAUSED — Press P to resume'; position: fixed; t
   </div>
 </div>
 <script type="module">
-/* Shinobi Survival — bundled 2026-11-15T01:08:03.232Z — 18 modules */
+/* Shinobi Survival — bundled 2026-11-15T01:11:49.053Z — 18 modules */
 
 /* ---- src/core/rng.js ---- */
 // Deterministic RNG. Same seed + same inputs = same run.
